@@ -1,5 +1,5 @@
-## ⏰ [Live Countdown Timer](https://maximilianBirkle.github.io/Tutorial-Week-8-and-9-Problem-Set-Matching-and-Entropy-Balancing/index.html)
-<iframe src="[https://yourusername.github.io/yourrepo/countdown.html](https://maximilianBirkle.github.io/Tutorial-Week-8-and-9-Problem-Set-Matching-and-Entropy-Balancing/countdown.html)" width="100%" height="300"></iframe>
+## ⏰ [Live Countdown](https://maximilianBirkle.github.io/Tutorial-Week-8-and-9-Problem-Set-Matching-and-Entropy-Balancing/index.html)
+
 ---
 
 # Tutorial-Week-8-and-9-Problem-Set-Matching-and-Entropy-Balancing
