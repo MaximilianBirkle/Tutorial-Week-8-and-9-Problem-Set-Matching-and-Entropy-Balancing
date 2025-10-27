@@ -1,0 +1,671 @@
+---
+title: "Tutorial Week 8 and 9: Matching and Entropy Balancing"
+subtitle: "Problem Set - Propensity Scores, Matching, and Synthetic Control"
+author:
+  - Maximilian Birkle
+  - Daniel Lehmann
+  - Henry Lucas
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    fig_caption: true
+    keep_tex: false
+    latex_engine: xelatex
+  github_document:
+    toc: true
+    html_preview: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
+                      fig.width = 10, fig.height = 6)
+```
+
+# Load Packages
+
+```{r load-packages}
+library(tidyverse)      # Data manipulation and visualization
+library(haven)          # Read Stata files
+library(MatchIt)        # Matching methods
+library(cobalt)         # Balance assessment
+library(randomForest)   # Random forest for propensity scores
+library(lmtest)         # Robust standard errors
+library(sandwich)       # Cluster-robust variance
+library(knitr)          # Tables
+library(kableExtra)     # Enhanced tables
+library(broom)          # Tidy model output
+library(Synth)          # Synthetic control method
+```
+
+\newpage
+
+# Part I: Propensity Scores, Matching, and Robust Post-Matching Inference
+
+## Background
+
+**Research Question:** Do **United Nations interventions** help shorten the duration of civil wars?
+
+Gilligan and Sergenti (2008) use matching methods to re-evaluate earlier findings suggesting that UN interventions *prolong* conflict. They argue that this conclusion stems from **selection bias** — the UN tends to intervene in the *worst* conflicts.
+
+**Dataset:** `war_pre_snapshots.dta`
+
+Each row represents a **conflict episode** observed before a potential UN intervention. Our goal is to estimate the causal effect of UN involvement (`UN`) on the length of the conflict (`t1 - t0`), while balancing on key pre-treatment covariates.
+
+## Load Data
+
+```{r load-data-part1}
+# Read the UN intervention dataset
+
+
+# Display structure and summary
+
+
+```
+
+## Define Treatment and Covariates
+
+```{r define-variables}
+# Treatment variable: UN intervention (1 = Yes, 0 = No)
+
+
+# Outcome variable: conflict duration (t1 - t0)
+
+
+# Covariates for propensity score model
+covar <- c(
+  "inter", "deaths", "couprev", "sos", "drugs", "t0",
+  "ethfrac", "pop", "lmtnest", "milper",
+  "eeurop", "lamerica", "asia", "ssafrica"
+)
+
+# Create covariate matrix
+
+
+```
+
+---
+
+## Q0. First Check of the Data
+
+### Tasks:
+
+1. Why might UN interventions **not** be randomly assigned across conflicts?
+2. Which of the listed variables are most likely to confound the relationship between `UN` and conflict duration? Run a quick logistic regression and check.
+
+```{r q0-selection-bias}
+# Logistic regression: UN intervention as function of covariates
+
+
+```
+
+**Discussion:**
+
+[Why might UN interventions not be randomly assigned? Which variables show strong associations with UN intervention?]
+
+---
+
+## Q1. Estimating Propensity Scores
+
+### Theoretical Background
+
+Let $T_i \in \{0,1\}$ be the treatment indicator and $X_i = (X_{i1}, X_{i2}, \ldots, X_{ip})$ the vector of pre-treatment covariates.
+
+The **propensity score** is defined as:
+
+$$e(X_i) = P(T_i = 1 \mid X_i)$$
+
+### Tasks:
+
+1. Define the propensity score
+2. Estimate $\hat{e}(X_i)$ in two ways:
+   - **(a)** Logistic regression: $\text{logit}(e(X_i)) = X_i' \beta$
+   - **(b)** Random forest classifier
+3. Report mean, SD, and range of $\hat{e}(X_i)$ for treated and control
+4. Create histogram/density plot by treatment status
+
+```{r q1-propensity-logit}
+# (a) Logistic regression propensity score
+
+
+# Extract predicted probabilities
+
+
+```
+
+```{r q1-propensity-rf}
+# (b) Random forest propensity score
+
+
+# Extract predicted probabilities
+
+
+```
+
+```{r q1-summary-stats}
+# Summary statistics of propensity scores
+
+
+```
+
+```{r q1-density-plot}
+# Density plot of propensity scores by treatment status
+
+
+```
+
+**Interpretation:**
+
+[Discuss the distribution of propensity scores. Are there regions of poor overlap?]
+
+---
+
+## Q2. Implement 1:1 Nearest-Neighbor Matching
+
+### Matching Setup
+
+For each estimated propensity score $\hat{e}(X_i)$, match each treated unit to the nearest control on the **logit of the propensity score**:
+
+$$\ell_i = \log\left( \frac{\hat{e}(X_i)}{1 - \hat{e}(X_i)} \right)$$
+
+Use **replacement** and a **caliper** of $0.2 \times \text{SD}(\ell_i)$ to restrict poor matches.
+
+### Tasks:
+
+1. Implement matching using both logit and RF propensity scores
+2. Report how many treated units fail to find a match
+3. How does this change the estimand?
+
+```{r q2-matching-logit}
+# Matching using logit propensity scores
+
+
+# Number of matched treated units
+
+
+```
+
+```{r q2-matching-rf}
+# Matching using RF propensity scores
+
+
+# Number of matched treated units
+
+
+```
+
+**Discussion:**
+
+[How many treated units were dropped? What does this mean for the target estimand (ATT)?]
+
+---
+
+## Q3. Standardized Mean Differences (SMDs)
+
+### SMD Formulas
+
+For each covariate $X^k$:
+
+**Before matching (ATT version):**
+
+$$\text{SMD}_{\text{raw}}(k) = \frac{\bar{X}^k_{T=1} - \bar{X}^k_{T=0}}{\sqrt{s^{2,k}_{T=1}}}$$
+
+**After matching:**
+
+$$\text{SMD}_{\text{match}}(k) = \frac{\bar{X}^{k,\text{treated}}_{\text{match}} - \bar{X}^{k,\text{control}}_{\text{match}}}{\sqrt{s^{2,k}_{T=1}}}$$
+
+### Tasks:
+
+1. Compute SMDs before and after matching for all covariates
+2. Create a Love plot showing balance before and after matching (both methods)
+3. Add vertical line at 0.1 (acceptable threshold)
+4. Comment on which design achieves better covariate balance
+5. Create two additional Love plots including interactions and squared terms
+
+```{r q3-smd-calculation}
+# Calculate SMDs before matching
+
+
+# Calculate SMDs after matching (logit)
+
+
+# Calculate SMDs after matching (RF)
+
+
+```
+
+```{r q3-love-plot-base}
+# Love plot: Base covariates
+
+
+```
+
+```{r q3-love-plot-interactions}
+# Love plot: Including interactions
+
+
+```
+
+```{r q3-love-plot-squares}
+# Love plot: Including squared terms
+
+
+```
+
+**Interpretation:**
+
+[Which method achieves better balance? Are all SMDs below 0.1?]
+
+---
+
+## Q4. Overlap
+
+### Tasks:
+
+1. For each method, report:
+   - Min and max of $\hat{e}(X_i)$ for treated and controls
+   - Proportion of treated units whose $\hat{e}(X_i)$ lies inside the support of controls (and vice versa)
+2. Plot distributions of $\hat{e}(X_i)$ for treated and controls
+3. Identify regions of poor overlap or extreme propensities
+4. (Optional) Trim observations outside common support and re-compute ATT
+5. Examine matched subsets - do matches seem like fair counterfactuals?
+
+```{r q4-overlap-stats}
+# Min/max propensity scores by treatment group
+
+
+# Proportion in common support
+
+
+```
+
+```{r q4-overlap-plot}
+# Plot propensity score distributions
+
+
+```
+
+```{r q4-trimming-optional}
+# Optional: Trim and re-estimate
+
+
+```
+
+**Discussion:**
+
+[Is there good overlap? Which observations are on the edge of common support?]
+
+---
+
+## Q5. Matched-Pair ATT
+
+### ATT Estimator
+
+Let each matched pair be denoted by $(i, j(i))$ where $i$ is treated and $j(i)$ is its matched control.
+
+The **average treatment effect on the treated** is:
+
+$$\widehat{\tau}_{\text{ATT}} = \frac{1}{N_T^*} \sum_{i \in \mathcal{T}^*} \left( Y_i - Y_{j(i)} \right)$$
+
+where $\mathcal{T}^*$ is the set of treated units with a valid match.
+
+### Task:
+
+Compute the ATT for both matching methods.
+
+```{r q5-att-calculation}
+# ATT using logit matching
+
+
+# ATT using RF matching
+
+
+```
+
+**Interpretation:**
+
+[What is the estimated effect of UN intervention on conflict duration?]
+
+---
+
+## Q5.5. Bias–Variance Tradeoff in Matching Ratios
+
+### (a) Conceptual Question
+
+For 1-to-$m$ nearest-neighbor matching without replacement, the ATT estimator is:
+
+$$\widehat{\tau}_{\text{ATT}}^{(m)} = \frac{1}{N_T^*} \sum_{i \in \mathcal{T}^*} \left( Y_i - \frac{1}{m}\sum_{j \in \mathcal{J}(i)} Y_j \right)$$
+
+where $\mathcal{J}(i)$ is the set of the $m$ closest control matches for treated unit $i$.
+
+**Tasks:**
+
+1. Explain why increasing $m$ tends to:
+   - **Decrease variance**
+   - **Increase bias**
+2. Discuss how this relates to distance in covariate space
+3. If overlap is weak, which risk dominates as $m$ grows?
+
+**Discussion:**
+
+[Your explanation of the bias-variance tradeoff here]
+
+---
+
+### (b) Practical Exercise
+
+**Tasks:**
+
+1. Re-run matching for 1:1, 2:1, and 3:1 ratios (with replacement and same caliper)
+2. Record: number matched, mean distance, ATT estimate
+3. Compute cluster-robust standard errors for each design
+4. Create results table
+5. Plot ATT vs. $m$ with ±1.96 SE error bars
+
+```{r q5-5-matching-ratios}
+# 1:1 matching
+
+
+# 2:1 matching
+
+
+# 3:1 matching
+
+
+```
+
+```{r q5-5-results-table}
+# Create comparison table
+
+
+```
+
+```{r q5-5-plot-ratios}
+# Plot ATT by matching ratio with error bars
+
+
+```
+
+**Interpretation:**
+
+[Do results display expected bias-variance pattern?]
+
+---
+
+### (c) Discussion
+
+**Tasks:**
+
+- Which design (1:1, 2:1, or 3:1) is most appropriate?
+- How does observed pattern relate to Abadie & Imbens (2006)?
+- What would happen with infinite data and perfect overlap?
+
+**Discussion:**
+
+[Your analysis here]
+
+---
+
+## Q6. Robust Post-Matching Inference (Abadie & Spiess, 2021)
+
+### Regression with Cluster-Robust Standard Errors
+
+After matching, fit the regression:
+
+$$Y_i = \alpha + \tau T_i + \varepsilon_i$$
+
+using only matched data.
+
+Let $s(i)$ denote the **subclass (pair id)** of observation $i$.
+
+Compute **cluster-robust standard errors** for $\hat{\tau}$ by clustering on $s(i)$:
+
+$$\widehat{V}_{\text{CR}}(\hat{\tau}) = (X'X)^{-1} \left( \sum_{s} X_s' \hat{\varepsilon}_s \hat{\varepsilon}_s' X_s \right) (X'X)^{-1}$$
+
+### Tasks:
+
+1. Report $\hat{\tau}$ and its cluster-robust standard error
+2. Compare results for logit-matched and RF-matched samples
+
+```{r q6-robust-inference-logit}
+# Regression on logit-matched data with cluster-robust SE
+
+
+```
+
+```{r q6-robust-inference-rf}
+# Regression on RF-matched data with cluster-robust SE
+
+
+```
+
+```{r q6-comparison-table}
+# Compare results
+
+
+```
+
+**Interpretation:**
+
+[Compare point estimates and standard errors across methods]
+
+---
+
+## Q7. (Optional) Bootstrap Check
+
+### Matched-Pair Bootstrap
+
+**Warning:** Bootstraps are not theoretically valid for matching estimators, but this serves as a check.
+
+**Tasks:**
+
+1. Resample matched pairs (subclasses) with replacement
+2. Recompute $\widehat{\tau}^{(b)}$ for each bootstrap sample $b = 1,\ldots,B$
+3. Report bootstrap mean, SD, and percentile 95% CI
+4. Compare to cluster-robust results
+
+```{r q7-bootstrap-optional}
+# Bootstrap procedure
+
+
+```
+
+**Discussion:**
+
+[Do bootstrap and cluster-robust results tell a similar story?]
+
+---
+
+## Q8. Reflection
+
+### Tasks:
+
+1. Why does the propensity score $e(X_i)$ act as a **balancing score**?
+2. How does random-forest estimation of $e(X_i)$ change matching results compared to logistic regression?
+3. Why is overlap ($0 < e(X_i) < 1$) necessary for identifying the ATT?
+
+**Discussion:**
+
+[Your reflection here]
+
+\newpage
+
+# Part II: Synthetic Control - German Reunification Study
+
+## Background
+
+In 1990, West Germany underwent reunification with East Germany. The question: *What was the economic cost (or benefit) of this event on West Germany's GDP per capita?*
+
+Using the synthetic control method, we construct a counterfactual "synthetic West Germany" from a weighted combination of other OECD countries.
+
+**Paper:** Abadie, Diamond & Hainmueller (2015), *Comparative Politics and the Synthetic Control Method*, AJPS.
+
+**Dataset:** Available via Harvard Dataverse (doi:10.7910/DVN/24714)
+
+## Load Data
+
+```{r load-data-part2}
+# Read German reunification dataset
+
+
+# Display structure
+
+
+```
+
+---
+
+## (a) Conceptual Questions
+
+### Tasks:
+
+1. Explain the intuition behind the synthetic control method. What kind of assignment problem does it address?
+2. Why is it particularly suitable for the West Germany case?
+3. What is the key identification assumption?
+
+**Discussion:**
+
+[Your conceptual explanation here]
+
+---
+
+## (b) Mathematical/Optimization Questions
+
+### The Optimization Problem
+
+The synthetic control method solves:
+
+$$\min_{w} \sum_{t \le T_0} \left(Y_{1t} - \sum_{j=2}^{J+1} w_j Y_{jt}\right)^2$$
+
+subject to:
+
+$$w_j \ge 0, \quad \sum_j w_j = 1$$
+
+### Tasks:
+
+1. Write and explain each term in the optimization problem
+2. What role do $v$-weights play in predictor balancing?
+3. Why is the convex-combination constraint important? What if weights could be negative or sum $\neq$ 1?
+
+**Mathematical Discussion:**
+
+[Your explanation of the optimization problem and constraints]
+
+---
+
+## (c) Estimation, Balance Before & After
+
+### Tasks:
+
+1. Estimate synthetic control for West Germany over pre-treatment period
+2. Compute balance table of key predictors (GDP, trade openness, inflation, schooling, investment) showing treated vs. synthetic mean **before treatment**
+3. Report non-zero weights $w_j$
+4. Interpret: which donor countries dominate and why?
+5. Assess whether pre-treatment fit is acceptable for credible inference
+
+```{r synth-estimation}
+# Prepare data for Synth package
+
+
+# Run synthetic control estimation
+
+
+```
+
+```{r synth-balance-table}
+# Create balance table for pre-treatment predictors
+
+
+```
+
+```{r synth-weights}
+# Report unit weights
+
+
+```
+
+**Interpretation:**
+
+[Which countries contribute most to synthetic West Germany? Is pre-treatment balance good?]
+
+---
+
+## (d) Effect Size & Permutation Test
+
+### Tasks:
+
+1. Plot actual vs. synthetic GDP per capita trajectory (pre- and post-treatment)
+2. Calculate estimated effect (gap) in first few post-treatment years and average post-treatment gap
+3. Perform **permutation (placebo) test** by reassigning treatment to each control country
+4. Report where treated unit's gap falls in the distribution (approximate p-value)
+5. Interpret: What does this suggest about the economic impact of reunification?
+
+```{r synth-plot-trajectory}
+# Plot actual vs synthetic West Germany
+
+
+```
+
+```{r synth-gap-calculation}
+# Calculate treatment effect (gap)
+
+
+```
+
+```{r synth-permutation-test}
+# Permutation test: assign treatment to each control
+
+
+# Calculate p-value
+
+
+```
+
+**Interpretation:**
+
+[What is the estimated effect? Is it statistically significant based on permutation test?]
+
+---
+
+## (e) Placebo Test on Earlier Years
+
+### Tasks:
+
+1. Conduct placebo treatment year **before** actual 1990 treatment (e.g., 1975)
+2. Re-estimate synthetic control and plot the gap
+3. What does pre-treatment gap behavior tell you about parallel-trajectory assumption?
+4. Comment on how convincing you find the main causal estimate
+
+```{r synth-placebo-pretreatment}
+# Placebo test with fake treatment year
+
+
+# Plot placebo gap
+
+
+```
+
+**Interpretation:**
+
+[Does the placebo test support the validity of the main estimate?]
+
+\newpage
+
+# Conclusion
+
+[Optional: Summarize key findings from both parts]
+
+---
+
+# References
+
+- Abadie, A., & Spiess, J. (2021). Robust Post-Matching Inference. *Journal of the American Statistical Association.*
+- Rosenbaum, P., & Rubin, D. (1983). The Central Role of the Propensity Score in Observational Studies for Causal Effects. *Biometrika.*
+- Abadie, A., & Imbens, G. (2006). Large Sample Properties of Matching Estimators for Average Treatment Effects. *Econometrica.*
+- Gilligan, M., & Sergenti, E. (2008). Do UN Interventions Cause Peace? Using Matching to Improve Causal Inference. *Quarterly Journal of Political Science.*
+- Abadie, A., Diamond, A., & Hainmueller, J. (2015). Comparative Politics and the Synthetic Control Method. *American Journal of Political Science*, 59(2), 495–510.
+- Abadie, A. (2021). Using Synthetic Controls: Feasibility, Data Requirements, and Methodological Aspects. *Journal of Economic Literature*, 59(2), 391–425.
+
+---
