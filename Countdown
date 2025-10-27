@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Assignment Countdown</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .countdown-container {
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+        }
+        .countdown {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .time-box {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            min-width: 100px;
+        }
+        .time-number {
+            font-size: 3em;
+            font-weight: bold;
+        }
+        .time-label {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="countdown-container">
+        <h1>Assignment Deadline</h1>
+        <div class="countdown">
+            <div class="time-box">
+                <div class="time-number" id="days">0</div>
+                <div class="time-label">Days</div>
+            </div>
+            <div class="time-box">
+                <div class="time-number" id="hours">0</div>
+                <div class="time-label">Hours</div>
+            </div>
+            <div class="time-box">
+                <div class="time-number" id="minutes">0</div>
+                <div class="time-label">Minutes</div>
+            </div>
+            <div class="time-box">
+                <div class="time-number" id="seconds">0</div>
+                <div class="time-label">Seconds</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set your deadline here (Year, Month-1, Day, Hour, Minute)
+        const deadline = new Date(2025, 10, 15, 23, 59, 0).getTime();
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = deadline - now;
+
+            if (distance < 0) {
+                document.querySelector('.countdown-container').innerHTML = '<h1>Deadline Passed!</h1>';
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('days').textContent = days;
+            document.getElementById('hours').textContent = hours;
+            document.getElementById('minutes').textContent = minutes;
+            document.getElementById('seconds').textContent = seconds;
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html>
