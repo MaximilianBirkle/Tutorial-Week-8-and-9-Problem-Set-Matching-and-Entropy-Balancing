@@ -27,20 +27,19 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
 # Load Packages
 
 ```{r load-packages}
-library(tidyverse)      # Data manipulation and visualization
-library(haven)          # Read Stata files
-library(MatchIt)        # Matching methods
-library(cobalt)         # Balance assessment
-library(randomForest)   # Random forest for propensity scores
-library(lmtest)         # Robust standard errors
-library(sandwich)       # Cluster-robust variance
-library(knitr)          # Tables
-library(kableExtra)     # Enhanced tables
-library(broom)          # Tidy model output
-library(Synth)          # Synthetic control method
+library(tidyverse)      
+library(haven)          
+library(MatchIt)        
+library(cobalt)         
+library(randomForest)   
+library(lmtest)         
+library(sandwich)       
+library(knitr)          
+library(kableExtra)     
+library(broom)          
+library(Synth)          
 ```
 
-\newpage
 
 # Part I: Propensity Scores, Matching, and Robust Post-Matching Inference
 
@@ -58,21 +57,21 @@ Each row represents a **conflict episode** observed before a potential UN interv
 
 ```{r load-data-part1}
 # Read the UN intervention dataset
-
+data_un <- read_dta("war_pre_snapshots.dta")
 
 # Display structure and summary
-
-
+#glimpse(data_un)
+#summary(data_un)
 ```
 
 ## Define Treatment and Covariates
 
 ```{r define-variables}
 # Treatment variable: UN intervention (1 = Yes, 0 = No)
-
+treat <- data_un$UN
 
 # Outcome variable: conflict duration (t1 - t0)
-
+outcome <- data_un$t1 - data_un$t0
 
 # Covariates for propensity score model
 covar <- c(
@@ -82,8 +81,7 @@ covar <- c(
 )
 
 # Create covariate matrix
-
-
+X <- data_un[, covar]
 ```
 
 ---
@@ -508,11 +506,14 @@ Using the synthetic control method, we construct a counterfactual "synthetic Wes
 
 ```{r load-data-part2}
 # Read German reunification dataset
+# Load the replication dataset
+load("repgermany.RData")
+repgermany <- x
 
 
 # Display structure
-
-
+#str(repgermany)
+#head(repgermany)
 ```
 
 ---
