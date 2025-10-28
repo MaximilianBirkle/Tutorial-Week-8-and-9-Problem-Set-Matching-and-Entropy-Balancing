@@ -37,7 +37,8 @@ library(sandwich)
 library(knitr)          
 library(kableExtra)     
 library(broom)          
-library(Synth)          
+library(Synth)   
+library(stargazer)
 ```
 
 
@@ -93,9 +94,44 @@ X <- data_un[, covar]
 1. Why might UN interventions **not** be randomly assigned across conflicts?
 2. Which of the listed variables are most likely to confound the relationship between `UN` and conflict duration? Run a quick logistic regression and check.
 
-```{r q0-selection-bias}
+```{r q0-selection-bias, results='asis'}
 # Logistic regression: UN intervention as function of covariates
+logit_selection <- glm(UN ~ inter + deaths + couprev + sos + drugs + t0 +
+                         ethfrac + pop + lmtnest + milper +
+                         eeurop + lamerica + asia + ssafrica,
+                       data = data_un,
+                       family = binomial(link = "logit"))
 
+# Create stargazer table
+stargazer(
+  logit_selection,
+  type = "latex",
+  title = "Selection into UN Intervention: Logistic Regression",
+  header = FALSE,
+  dep.var.labels = "UN Intervention (1 = Yes)",
+  covariate.labels = c(
+    "Internationalized Conflict",
+    "Battle Deaths",
+    "Coup/Revolution",
+    "Strategic Oil Supply",
+    "Drug Activity",
+    "Conflict Start Year",
+    "Ethnic Fractionalization",
+    "Log Population",
+    "Log Mountainous Terrain",
+    "Military Personnel per Capita",
+    "Eastern Europe",
+    "Latin America",
+    "Asia",
+    "Sub-Saharan Africa",
+    "Constant"
+  ),
+  no.space = TRUE,
+  omit.stat = c("aic", "ll"),
+  notes = "Standard errors in parentheses.",
+  notes.align = "l",
+  digits = 3
+)
 
 ```
 
@@ -109,7 +145,7 @@ The decision to intervene depends on a number of factors, including the UN Secur
 
 Because the "treated" (intervention) and "untreated" (no intervention) cases are so different on so many variables, it becomes almost impossible to distinguish whether a causal effect is due to the treatment itself or some function of these other confounding variables. When you have differences that large between units, you face an extreme problem of constructing the counterfactual—that is, figuring out what would have happened had the UN not intervened.
 
-Which variables show strong associations with UN intervention?
+**Which variables show strong associations with UN intervention?**
 
 
 ---
