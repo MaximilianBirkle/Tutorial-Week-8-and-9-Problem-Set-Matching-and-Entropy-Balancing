@@ -101,7 +101,16 @@ X <- data_un[, covar]
 
 **Discussion:**
 
-[Why might UN interventions not be randomly assigned? Which variables show strong associations with UN intervention?]
+**Why might UN interventions not be randomly assigned?** 
+
+Cases where the UN intervenes are quite different from where they do not, which is why UN missions are not randomly assigned.
+
+The decision to intervene depends on a number of factors, including the UN Security Council's selection process and whether the UN even pays attention to these cases.
+
+Because the "treated" (intervention) and "untreated" (no intervention) cases are so different on so many variables, it becomes almost impossible to distinguish whether a causal effect is due to the treatment itself or some function of these other confounding variables. When you have differences that large between units, you face an extreme problem of constructing the counterfactual—that is, figuring out what would have happened had the UN not intervened.
+
+Which variables show strong associations with UN intervention?
+
 
 ---
 
