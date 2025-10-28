@@ -1,5 +1,9 @@
 ## ⏰ [Live Countdown](https://maximilianBirkle.github.io/Tutorial-Week-8-and-9-Problem-Set-Matching-and-Entropy-Balancing/index.html)
 
+I set up a notion page with the assignment, where we can also write our answers in, if we don't want to use R markdown all the time. Since we also can upload pictures and stuff in notion quite easily, we can fill in our results in there as weell, before pasting them into the .Rmd.
+
+https://www.notion.so/Tutorial-Week-8-and-9-Problem-Set-Matching-and-Entropy-Balancing-2996d8492dba800c96efe34df6aedc36?source=copy_link
+
 ---
 
 # Tutorial-Week-8-and-9-Problem-Set-Matching-and-Entropy-Balancing
