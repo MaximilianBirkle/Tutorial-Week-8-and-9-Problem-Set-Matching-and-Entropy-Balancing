@@ -187,10 +187,19 @@ A **propensity score** is the probability that a unit with certain characteristi
 ```{r q1-propensity-logit}
 # (a) Logistic regression propensity score
 
+# Logistic regression: UN intervention as function of covariates
+ps_logistic <- glm(treat ~ inter + deaths + couprev + sos + drugs + t0 +
+                         ethfrac + pop + lmtnest + milper +
+                         eeurop + lamerica + asia + ssafrica,
+                       data = dta_new,
+                       family = binomial(link = "logit"))
+
 
 # Extract predicted probabilities
 
+ps_logistic_probs <- predict(ps_logistic, type = "response")
 
+summary(ps_logistic_probs)
 ```
 
 ```{r q1-propensity-rf}
