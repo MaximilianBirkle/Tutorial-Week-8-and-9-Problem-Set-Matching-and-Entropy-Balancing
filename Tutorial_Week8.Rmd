@@ -167,6 +167,9 @@ The **propensity score** is defined as:
 
 $$e(X_i) = P(T_i = 1 \mid X_i)$$
 
+A **propensity score** is the probability that a unit with certain characteristics will be assigned to the treatment group. It ranges between 0 and 1. 
+
+
 ### Tasks:
 
 1. Define the propensity score
