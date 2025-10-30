@@ -197,16 +197,32 @@ ps_logistic <- glm(treat ~ inter + deaths + couprev + sos + drugs + t0 +
 
 # Extract predicted probabilities
 
-ps_logistic_probs <- predict(ps_logistic, type = "response")
+dta_new$ps_logistic_probs <- predict(ps_logistic, type = "response")
 
 summary(ps_logistic_probs)
 ```
 
 ```{r q1-propensity-rf}
+
 # (b) Random forest propensity score
 
+ps_random_forest <- randomForest(
+  factor(treat) ~ inter + deaths + couprev + sos + drugs + t0 +
+    ethfrac + pop + lmtnest + milper +
+    eeurop + lamerica + asia + ssafrica,
+  data = dta_new,
+  ntree = 500,
+  importance = TRUE
+)
 
 # Extract predicted probabilities
+
+dta_new$ps_random_forest <- predict(ps_random_forest, type = "prob")[, "1"]
+
+summary(ps_random_forest)
+
+
+
 
 
 ```
