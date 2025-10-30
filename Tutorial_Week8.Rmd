@@ -72,7 +72,7 @@ data_un <- read_dta("war_pre_snapshots.dta")
 treat <- data_un$UN
 
 # Outcome variable: conflict duration (t1 - t0)
-outcome <- data_un$t1 - data_un$t0
+outcome <- data_un$t - data_un$t0
 
 # Covariates for propensity score model
 covar <- c(
@@ -83,6 +83,11 @@ covar <- c(
 
 # Create covariate matrix
 X <- data_un[, covar]
+
+dta_new <- data.frame(
+  treat = treat,
+  outcome = outcome,
+  X)
 ```
 
 ---
@@ -96,10 +101,10 @@ X <- data_un[, covar]
 
 ```{r q0-selection-bias, results='asis'}
 # Logistic regression: UN intervention as function of covariates
-logit_selection <- glm(UN ~ inter + deaths + couprev + sos + drugs + t0 +
+logit_selection <- glm(treat ~ inter + deaths + couprev + sos + drugs + t0 +
                          ethfrac + pop + lmtnest + milper +
                          eeurop + lamerica + asia + ssafrica,
-                       data = data_un,
+                       data = dta_new,
                        family = binomial(link = "logit"))
 
 # Create stargazer table
