@@ -211,7 +211,7 @@ ps_random_forest <- randomForest(
     ethfrac + pop + lmtnest + milper +
     eeurop + lamerica + asia + ssafrica,
   data = dta_new,
-  ntree = 500,
+  ntree = 1000,
   importance = TRUE
 )
 
