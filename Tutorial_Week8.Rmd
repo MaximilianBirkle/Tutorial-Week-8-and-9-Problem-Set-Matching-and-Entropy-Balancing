@@ -219,7 +219,7 @@ ps_random_forest <- randomForest(
 
 dta_new$ps_random_forest <- predict(ps_random_forest, type = "prob")[, "1"]
 
-summary(ps_random_forest)
+print(ps_random_forest)
 
 
 
@@ -230,7 +230,45 @@ summary(ps_random_forest)
 ```{r q1-summary-stats}
 # Summary statistics of propensity scores
 
+# Logistic Regression Stats
+logit_control_mean <- mean(dta_new$ps_logistic_probs[dta_new$treat == 0], na.rm = TRUE)
+logit_control_sd   <- sd(dta_new$ps_logistic_probs[dta_new$treat == 0], na.rm = TRUE)
+logit_control_min  <- min(dta_new$ps_logistic_probs[dta_new$treat == 0], na.rm = TRUE)
+logit_control_max  <- max(dta_new$ps_logistic_probs[dta_new$treat == 0], na.rm = TRUE)
 
+logit_treated_mean <- mean(dta_new$ps_logistic_probs[dta_new$treat == 1], na.rm = TRUE)
+logit_treated_sd   <- sd(dta_new$ps_logistic_probs[dta_new$treat == 1], na.rm = TRUE)
+logit_treated_min  <- min(dta_new$ps_logistic_probs[dta_new$treat == 1], na.rm = TRUE)
+logit_treated_max  <- max(dta_new$ps_logistic_probs[dta_new$treat == 1], na.rm = TRUE)
+
+# Random Forest Stats
+rf_control_mean <- mean(dta_new$ps_random_forest[dta_new$treat == 0], na.rm = TRUE)
+rf_control_sd   <- sd(dta_new$ps_random_forest[dta_new$treat == 0], na.rm = TRUE)
+rf_control_min  <- min(dta_new$ps_random_forest[dta_new$treat == 0], na.rm = TRUE)
+rf_control_max  <- max(dta_new$ps_random_forest[dta_new$treat == 0], na.rm = TRUE)
+
+rf_treated_mean <- mean(dta_new$ps_random_forest[dta_new$treat == 1], na.rm = TRUE)
+rf_treated_sd   <- sd(dta_new$ps_random_forest[dta_new$treat == 1], na.rm = TRUE)
+rf_treated_min  <- min(dta_new$ps_random_forest[dta_new$treat == 1], na.rm = TRUE)
+rf_treated_max  <- max(dta_new$ps_random_forest[dta_new$treat == 1], na.rm = TRUE)
+
+
+# Data Frame with results
+summary_stats_q1 <- data.frame(
+  Statistic = c("Mean", "Std. Deviation", "Min", "Max"),
+  Logit_Control = c(logit_control_mean, logit_control_sd, logit_control_min, logit_control_max),
+  Logit_Treated = c(logit_treated_mean, logit_treated_sd, logit_treated_min, logit_treated_max),
+  RF_Control = c(rf_control_mean, rf_control_sd, rf_control_min, rf_control_max),
+  RF_Treated = c(rf_treated_mean, rf_treated_sd, rf_treated_min, rf_treated_max)
+)
+
+kable(summary_stats_q1, 
+      digits = 3, 
+      col.names = c("Statistic", "Control (T=0)", "Treated (T=1)", "Control (T=0)", "Treated (T=1)"),
+      caption = "Table 1: Propensity Score Distribution by Model and Treatment Status"
+) %>%
+  add_header_above(c(" " = 1, "Logistic Regression" = 2, "Random Forest" = 2)) %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
 ```
 
 ```{r q1-density-plot}
