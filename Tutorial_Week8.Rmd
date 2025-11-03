@@ -333,20 +333,55 @@ Use **replacement** and a **caliper** of $0.2 \times \text{SD}(\ell_i)$ to restr
 2. Report how many treated units fail to find a match
 3. How does this change the estimand?
 
-```{r q2-matching-logit}
-# Matching using logit propensity scores
+```{r q2-matching-logit-randomforest}
+
+# Logit-Score Variables
+dta_new$logit_ps_logit <- log(dta_new$ps_logistic_probs / (1 - dta_new$ps_logistic_probs))
+dta_new$logit_ps_rf    <- log(dta_new$ps_random_forest / (1 - dta_new$ps_random_forest))
 
 
-# Number of matched treated units
+# Our RF model likely has p-scores of 0 or 1. log(0) = -Inf. log(1/0) = Inf.
+# We must remove these, as they are unmatchable.
+dta_new$logit_ps_logit[!is.finite(dta_new$logit_ps_logit)] <- NA
+dta_new$logit_ps_rf[!is.finite(dta_new$logit_ps_rf)]       <- NA
+
+# MatchIt requires a dataset with no NAs in the variables used.
+dta_complete <- na.omit(dta_new)
+
+# Match using Logistic Regression Scores
+m_logit <- matchit(
+  treat ~ 1,                        # Formula: treatment ~ no covariates
+  data = dta_complete,
+  distance = dta_complete$logit_ps_logit, # Use our pre-built logit-score
+  method = "nearest",             # Use nearest neighbor
+  ratio = 1,                        # 1:1 matching
+  replace = TRUE,                   # Use replacement
+  caliper = 0.2,                    # Caliper width
+  std.caliper = TRUE                # TRUE = 0.2 * SD(distance)
+)
+
+# Match using Random Forest Scores
+m_rf <- matchit(
+  treat ~ 1,
+  data = dta_complete,
+  distance = dta_complete$logit_ps_rf, # Use our pre-built RF logit-score
+  method = "nearest",
+  ratio = 1,
+  replace = TRUE,
+  caliper = 0.2,
+  std.caliper = TRUE
+)
 
 
 ```
 
-```{r q2-matching-rf}
-# Matching using RF propensity scores
+```{r q2-matching_summary}
 
+# Summary for Logit Match
+summary(m_logit)
 
-# Number of matched treated units
+# Summary for Random Forest Match
+summary(m_rf)
 
 
 ```
