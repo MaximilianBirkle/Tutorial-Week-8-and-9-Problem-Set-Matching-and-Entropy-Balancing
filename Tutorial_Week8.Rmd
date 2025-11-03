@@ -643,13 +643,19 @@ repgermany <- x
 
 **Discussion:**
 
-The optimization problem in synthetic control is the problem to find the ideal set of weights to build the most similar looking control group to the treatment group pre-treatment. To answer the above questions in more detail, we first have to define the meaning of the underlying terminology.
+**1.)**
 
-**The Synthetic Control**
+The synthetic control method serves as a way to bridge the quantitative/qualitative divide in comparative politics and possibly all of social science research, helping to make precise quantitative inference in small-sample studies. Usually, small sample comparative case studies uncover evidence at a level of high granularity that is impossible to establish in large-scale quantitative studies, which in turn provide precise numerical results that can be compared across studies. For these reasons calls became loud to combine the best of both worlds.
 
-First of all, we have a sample of $J+1$ units of analysis (e.g. countries), where $j=1$ is the case of interest ("treated unit"), and the units ($j=2$ to $j=J$) define the "Donor pool" of potential comparison units. The goal of the Synthetic control is to find a weighted average of the donor pool, that is a $(J \times 1)$ vector of weights $W= (w_2, ..., w_{J+1})',$ with $0 \leq w_j \leq 1$ for $j=2, ..., J$ and $w_2+...+w_{J+1}=1$, that the characteristics of the treated unit is best resembled by the synthetic control. 
-Let $X_1$ be a $(k\times 1)$ vector of preintervention characteristics for the treated unit and $X_0$ be a $(k\times J)$ matrix of the same variables for the donor pool ($j=2$ to $j=J$). The optimization problem finds $W^*$ that minimizes $\|X_1-X_0W\|$, the difference between the treated unit's characteristics and the synthetic control.
+The goal of most study designs is to compare outcomes between treated units, that are the main objects of study, and similar but unaffected control units. The comparison units are intended to reproduce the counterfactual of the treated units in the absence of the treatment. When we try to make quantitative causal inference in small sample comparative studies, we usually do not fail due to the small sample size itself, but due to the missing mechanism of how to find suitable comparison units for the small pool of units we have.
 
+Especially in comparative political science, we often look at aggregate entities, such as states, countries or regions, for which obvious single comparisons often do not exist. In that case we often have one aggregate unit receiving treatment, where we try to select a set of similar untreated units from all of the untreated cases ("donor pool") to approximate the counterfactual. Standard designs based on selection on observables try to remove bias by controlling for measurable covariates. This approach fails when unobserved factors confound the result. This is particularly prevalent in comparative political research, as we study large entities as treatment units and control units, being made up of many individuals.
+
+However, the synthetic control method is based on the premise that when the units of analysis are a few aggregate entities, a combination of comparison units (the synthetic control) often does a better job of reproducing the characteristics of the unit or units representing the case of interest than any single comparison unit alone. The comparison unit in the synthetic control method is selected as the weighted average of all potential comparison units. This weighted average is optimized to best reproduce the treated unit's pre-treatment outcome path and other key predictors. The optimally-weighted average is what serves as the counterfactual, which is custom-built to be the treated unit's 'doppelgänger' before treatment occurred. The core intuition is that by replicating the pre-treatment trend, the synthetic control also replicates the unobserved factors that drove that trend, thus creating a valid counterfactual.
+
+**2.)**
+
+**3.)**
 
 
 ---
@@ -674,7 +680,17 @@ $$w_j \ge 0, \quad \sum_j w_j = 1$$
 
 **Mathematical Discussion:**
 
-[Your explanation of the optimization problem and constraints]
+The optimization problem in synthetic control is the problem to find the ideal set of weights to build the most similar looking control group to the treatment group pre-treatment. To answer the above questions in more detail, we first have to define the meaning of the underlying terminology.
+
+**The Synthetic Control**
+
+First of all, we have a sample of $J+1$ units of analysis (e.g. countries), where $j=1$ is the case of interest ("treated unit"), and the units ($j=2$ to $j=J$) define the "Donor pool" of potential comparison units. The goal of the Synthetic control is to find a weighted average of the donor pool, that is a $(J \times 1)$ vector of weights $W= (w_2, ..., w_{J+1})',$ with $0 \leq w_j \leq 1$ for $j=2, ..., J$ and $w_2+...+w_{J+1}=1$, that the characteristics of the treated unit is best resembled by the synthetic control. 
+Let $X_1$ be a $(k\times 1)$ vector of preintervention characteristics for the treated unit and $X_0$ be a $(k\times J)$ matrix of the same variables for the donor pool ($j=2$ to $j=J$). The optimization problem is defined as to find a $W^*$ that minimizes $\|X_1-X_0W\|$, the difference between the treated unit's characteristics and the synthetic control. 
+
+**Operationalization**
+Given $m=1, ...,k$, $X_{1m}$ is the value of the $m$-th variable for the treated unit and $X_{0m}:$ is a $(1 \times J)$ vector containing the values of the $m$-th variable for the units in the donor pool. $W^*$ is chosen to minimize:
+
+$\sum_{m=1}^{k}v_m(X_{1m}-X_{0m}W)^2$
 
 ---
 
