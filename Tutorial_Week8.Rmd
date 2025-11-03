@@ -692,6 +692,28 @@ Given $m=1, ...,k$, $X_{1m}$ is the value of the $m$-th variable for the treated
 
 $\sum_{m=1}^{k}v_m(X_{1m}-X_{0m}W)^2$
 
+
+**Regarding Question 2.)**
+
+$v_m$ is a wight that reflects the relative importance assigned to each of the predictor variables, when the difference between $X_1 \text{ and } X_0W$ is measured. It is crucial that the synthetic control closely reproduces the values that variables with a large predictive power on the outcome of interest take for the unit affected by the intervention. Therefore, variables with high predictive power, logically receive high $v$-weights.
+
+The $v$-weights therefore scale the influence of a potential mismatch between the pre-treatment case of interest and the synthetic control. The unit weights $w_j$ however, determine the contribution of each single unit $(j=2 \text{ to } j=J)$ in our data (or donor pool), to the overall value of that value in the synthetic control condition. Therefore, the $v$-weights, scale the relative importance of the $w_j$ weights for a variable $m$. Selecting a high value for $v$, also leads to a stronger influence of an individual units ($j$) difference between treatment and synthetic control. Where variables are assumed to receive a higher weight, values of $w_j$ should also be chosen more carefully. Selecting low values for $v$, leads to lower influence of difference in pre-treatment characteristics of the treated and the synthetic control.
+
+
+**The Synthetic Control Estimator**
+
+Let $Y_{it}$ denote the outcome of unit $j$ at time $t$, $Y_1$ be a $(T_1 \times 1)$ vector collecting the post-intervention values of the outcome for the treated unit, and $Y_0$ be a $(T_1 \times J)$ matrix where column $j$ contains the post-intervention values of the outcome for unit $j+1$. For a post-intervention period $t$ (with $t \geq T_0$), the synthetic control estimator of the effect of the treatment is given by the difference between the outcome of the treated unit $(Y_{1t})$ and the outcome for the synthetic control at that period, which equals the difference between the post-intervention outcomes of the treated unit and the synthetic control $Y_1-Y_0W^*$:
+
+$$Y_{1t}- \sum_{j=2}^{J+1} w_j^* Y_{jt}$$
+
+**Regarding Question 3:**
+
+Recalling the premise and the motivation of the synthetic control method, the goal is to construct a combination of comparison units to reproduce the characteristics of the unit or units representing the case of interest. By definition, the comparison units are constructed by taking the weighted average of all potential comparison units that best resemble the characteristics of the case of interest. 
+
+Therefore we can answer the question of what would happen if the weights "could" be negative or sum up to different than one, using just some basic statistics definitions. A mathematical average (or mean) is the sum of all numbers in a set divided by the count of how many numbers are in that set. A weighted average is the sum of a set of numbers where each number has first been multiplied by its own "importance" or "weight" (as explained in the paper). When the weights are negative or greater than one, it is no longer a weighted average, but extrapolation, where a weight greater than one helps to project beyond, and a negative weight means to subtract that unit's contribution, creating a value that has a negative effect. 
+
+According to the authors, this is exactly what we see in regression-based approaches. Although they use synthetic comparison units having coefficients that sum up to one as well, the regression approach **does not** restrict the coefficients of the linear combination that define the comparison unit to be between zero and one. If we now assume that our individual weights $(w_j)$ in the synthetic control term could also have values beyond $[0, 1]$, this would mean that we would just have a simple linear regression model, whose weights extrapolate to produce a perfect fit, in order to minimize the error. The findings of the paper show, however, that extrapolation is not necessary in the context of this study, since there exists a synthetic control that closely fits the values of the characteristics of the units and that does not extrapolate outside of the support of the data.
+
 ---
 
 ## (c) Estimation, Balance Before & After
