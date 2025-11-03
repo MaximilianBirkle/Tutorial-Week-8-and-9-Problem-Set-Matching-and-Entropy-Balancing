@@ -643,7 +643,14 @@ repgermany <- x
 
 **Discussion:**
 
-[Your conceptual explanation here]
+The optimization problem in synthetic control is the problem to find the ideal set of weights to build the most similar looking control group to the treatment group pre-treatment. To answer the above questions in more detail, we first have to define the meaning of the underlying terminology.
+
+**The Synthetic Control**
+
+First of all, we have a sample of $J+1$ units of analysis (e.g. countries), where $j=1$ is the case of interest ("treated unit"), and the units ($j=2$ to $j=J$) define the "Donor pool" of potential comparison units. The goal of the Synthetic control is to find a weighted average of the donor pool, that is a $(J \times 1)$ vector of weights $W= (w_2, ..., w_{J+1})',$ with $0 \leq w_j \leq 1$ for $j=2, ..., J$ and $w_2+...+w_{J+1}=1$, that the characteristics of the treated unit is best resembled by the synthetic control. 
+Let $X_1$ be a $(k\times 1)$ vector of preintervention characteristics for the treated unit and $X_0$ be a $(k\times J)$ matrix of the same variables for the donor pool ($j=2$ to $j=J$). The optimization problem finds $W^*$ that minimizes $\|X_1-X_0W\|$, the difference between the treated unit's characteristics and the synthetic control.
+
+
 
 ---
 
