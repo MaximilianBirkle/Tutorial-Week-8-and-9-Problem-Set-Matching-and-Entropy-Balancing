@@ -39,6 +39,7 @@ library(kableExtra)
 library(broom)          
 library(Synth)   
 library(stargazer)
+library(patchwork)
 ```
 
 
@@ -266,12 +267,53 @@ kable(summary_stats_q1,
 ```{r q1-density-plot}
 # Density plot of propensity scores by treatment status
 
+# Logistic Regression Plot
+p_logit <- ggplot(dta_new, aes(x = ps_logistic_probs, fill = factor(treat))) +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(
+    name = "Treatment Status",
+    values = c("0" = "blue", "1" = "red"),
+    labels = c("0" = "Control (No UN)", "1" = "Treated (UN)")
+  ) +
+  labs(
+    title = "A. Logistic Regression Scores",
+    x = "Propensity Score",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") # Move legend to the bottom
 
+# Random Forest Plot
+p_rf <- ggplot(dta_new, aes(x = ps_random_forest, fill = factor(treat))) +
+  geom_density(alpha = 0.7) +
+  scale_fill_manual(
+    name = "Treatment Status",
+    values = c("0" = "blue", "1" = "red"),
+    labels = c("0" = "Control (No UN)", "1" = "Treated (UN)")
+  ) +
+  labs(
+    title = "B. Random Forest Scores",
+    x = "Propensity Score",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom") # Move legend to the bottom
+
+# --- 3. Combine the plots ---
+p_logit + p_rf
 ```
 
 **Interpretation:**
+The propensity score distributions reveal a severe lack of common support, which will be challenging for the matching analysis. The summary statistics clearly illustrate this imbalance: The control group (N = 1,211) is a highly homogenous population whose propensity scores are tightly clustered at the low end of the distribution. For the logistic model, their scores have a *mean of 0.010* and a *maximum value of only 0.194*. This indicates the model correctly identifies these units as having a very low probabillity of receiving a UN intervention. 
 
-[Discuss the distribution of propensity scores. Are there regions of poor overlap?]
+In sharp contrast, the treated group (N = 16) is extremely heterogeeous. Their propensity scores are widely dispersed across the full spectrum, ranging from 0.000 to 0.884. This shows that the treated units, as expected, had a much higher predicted probability of intervention. 
+
+The core problem lies in the disconnect between these two distributions. The common support - the region where both treated and control units exist - is effectively confined *to the narrow 0.000 - 0.194 range*. Consequently, any treated unit with a propensity score above 0.194 *has no comparable units available for matching*. 
+
+The density plots visually confirm this. We observe a massive, high-density spike at zero for the control group, while the small treated group forms a low, flat distribution that is almost invisible by comparison. The plot's y-axis is scaled to fit the control group, which visually obscures the treated group, and perfectly illustrates the extreme imbalance. 
+
+This lack of overlap will probably have direct implications for Q2. When we apply the matching alogrithm with a 0.2 caliper, we must anticipate that a large portion of our 16 treated units will fail to find a match and will be discarded. This finding illustrates that the conflicts the UN intervened in are, based on the covariates in the dataset, fundamentally different from those it did not. 
+
 
 ---
 
