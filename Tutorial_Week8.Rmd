@@ -205,6 +205,8 @@ dta_new$ps_logistic_probs <- predict(ps_logistic,
 
 # (b) Random forest propensity score
 
+set.seed(68159) #for reproducability
+
 ps_random_forest <- randomForest(
   factor(treat) ~ inter + deaths + couprev + sos + drugs + t0 +
     ethfrac + pop + lmtnest + milper +
@@ -255,13 +257,21 @@ summary_stats_q1 <- data.frame(
   RF_Treated = c(rf_treated_mean, rf_treated_sd, rf_treated_min, rf_treated_max)
 )
 
-kable(summary_stats_q1, 
-      digits = 3, 
-      col.names = c("Statistic", "Control (T=0)", "Treated (T=1)", "Control (T=0)", "Treated (T=1)"),
-      caption = "Table 1: Propensity Score Distribution by Model and Treatment Status"
-) %>%
-  add_header_above(c(" " = 1, "Logistic Regression" = 2, "Random Forest" = 2)) %>%
-  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+tbl <- knitr::kable(
+  summary_stats_q1, 
+  digits = 3, 
+  col.names = c("Statistic", "Control (T=0)", "Treated (T=1)", "Control (T=0)", "Treated (T=1)"),
+  caption = "Table 1: Propensity Score Distribution by Model and Treatment Status"
+)
+
+if (knitr::is_latex_output() || knitr::is_html_output()) {
+  tbl <- tbl %>%
+    kableExtra::add_header_above(c(" " = 1, "Logistic Regression" = 2, "Random Forest" = 2)) %>%
+    kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+}
+
+tbl
+
 ```
 
 ```{r q1-density-plot}
@@ -304,9 +314,9 @@ p_logit + p_rf
 ```
 
 **Interpretation:**
-The propensity score distributions reveal a severe lack of common support, which will be challenging for the matching analysis. The summary statistics clearly illustrate this imbalance: The control group (N = 1,211) is a highly homogenous population whose propensity scores are tightly clustered at the low end of the distribution. For the logistic model, their scores have a *mean of 0.010* and a *maximum value of only 0.194*. This indicates the model correctly identifies these units as having a very low probabillity of receiving a UN intervention. 
+The propensity score distributions reveal a severe lack of common support, which will be challenging for the matching analysis. The summary statistics clearly illustrate this imbalance: The control group (N = 1,211) is a highly homogenous population whose propensity scores are tightly clustered at the low end of the distribution. For the logistic model, their scores have a *mean of 0.010* and a *maximum value of only 0.194*. This indicates the model correctly identifies these units as having a very low probability of receiving a UN intervention. 
 
-In sharp contrast, the treated group (N = 16) is extremely heterogeeous. Their propensity scores are widely dispersed across the full spectrum, ranging from 0.000 to 0.884. This shows that the treated units, as expected, had a much higher predicted probability of intervention. 
+In sharp contrast, the treated group (N = 16) is extremely heterogeneous. Their propensity scores are widely dispersed across the full spectrum, ranging from 0.000 to 0.884. This shows that the treated units, as expected, had a much higher predicted probability of intervention. 
 
 The core problem lies in the disconnect between these two distributions. The common support - the region where both treated and control units exist - is effectively confined *to the narrow 0.000 - 0.194 range*. Consequently, any treated unit with a propensity score above 0.194 *has no comparable units available for matching*. 
 
