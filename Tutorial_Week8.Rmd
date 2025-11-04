@@ -398,7 +398,9 @@ summary(m_rf)
 
 **Discussion:**
 
-[How many treated units were dropped? What does this mean for the target estimand (ATT)?]
+Matching on the logit of the propensity score with a 0.2 caliper leads to a loss of treated observations: out of 15 treated conflicts, only 9 (logit) or 8 (RF) find an acceptable match. The remaining ca. 45% of treated units lie outside the region of common support and are discarded to avoid bias.
+
+As a result, the estimand changes. Instead of the ATT for all treated wars, we now estimate the ATT for the subset of treated conflicts whose observed characteristics overlap with those of the controls. This means our causal conclusion applies only to “matchable” conflicts. The matched ATT is therefore internally valid, but less externally generalizable.
 
 ---
 
@@ -425,20 +427,33 @@ $$\text{SMD}_{\text{match}}(k) = \frac{\bar{X}^{k,\text{treated}}_{\text{match}}
 5. Create two additional Love plots including interactions and squared terms
 
 ```{r q3-smd-calculation}
-# Calculate SMDs before matching
+# Raw SMDs (before matching)
+bal_raw <- bal.tab(
+  treat ~ inter + deaths + couprev + sos + drugs + t0 +
+    ethfrac + pop + lmtnest + milper +
+    eeurop + lamerica + asia + ssafrica,
+  data = dta_new,
+  estimand = "ATT",
+  quick = FALSE
+)
 
 
-# Calculate SMDs after matching (logit)
+# SMDs after logit matching
+bal_logit <- bal.tab(m_logit, un = TRUE)
 
+# SMDs after RF matching
+bal_rf <- bal.tab(m_rf, un = TRUE)
 
-# Calculate SMDs after matching (RF)
+smd_df <- data.frame(Covariate = rownames(bal_raw$Balance),
+                     Raw = bal_raw$Balance$Diff.Un,
+                     Logit_Matched = bal_logit$Balance$Diff.Adj,
+                     RF_Matched = bal_rf$Balance$Diff.Adj)
 
-
+knitr::kable(smd_df, digits = 3,
+             caption = "Standardized Mean Differences Before and After Matching")
 ```
 
 ```{r q3-love-plot-base}
-# Love plot: Base covariates
-
 
 ```
 
