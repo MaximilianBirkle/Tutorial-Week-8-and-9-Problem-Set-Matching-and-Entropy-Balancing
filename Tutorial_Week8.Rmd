@@ -497,9 +497,24 @@ smd_long <- smd_df %>%
   mutate(Absolute_SMD = abs(SMD))
 
 
-# Create the plot
-ggplot(smd_long, aes(x = Absolute_SMD, y = Covariate, color = Sample, shape = Sample)) +
-  geom_point(size = 3) +
+# Order Covariates by Unadjusted SMD
+# We want the y-axis to be sorted from largest imbalance (top)
+# to smallest (bottom).
+
+# Get the vector of covariate names in the desired order
+covariate_order <- smd_df %>%
+  mutate(Absolute_SMD = abs(Unadjusted)) %>%
+  arrange(Absolute_SMD) %>%
+  pull(Covariate)
+
+# Create the 'long' data frame for plotting
+smd_long_ordered <- smd_long %>%
+  mutate(Covariate = factor(Covariate, levels = covariate_order))
+
+
+# Create love plot with ggplot
+ggplot(smd_long_ordered, aes(x = Absolute_SMD, y = Covariate, color = Sample, shape = Sample)) +
+  geom_point(size = 3, position = position_dodge(width = 0.6)) + 
   geom_vline(xintercept = 0.1, linetype = "dashed", color = "black") +
   labs(
     title = "Covariate Balance Before and After Matching",
@@ -508,13 +523,15 @@ ggplot(smd_long, aes(x = Absolute_SMD, y = Covariate, color = Sample, shape = Sa
   ) +
   scale_color_manual(
     name = "Sample",
-    values = c("Unadjusted" = "grey", "Logit_Matched" = "blue", "RF_Matched" = "red")
+    values = c("Unadjusted" = "grey30", "Logit_Matched" = "blue", "RF_Matched" = "red")
   ) +
   scale_shape_manual(
     name = "Sample",
     values = c("Unadjusted" = 15, "Logit_Matched" = 17, "RF_Matched" = 18)
   ) +
-  theme_minimal()
+  theme_bw() + 
+  theme(legend.position = "bottom") + 
+  coord_cartesian(xlim = c(0, NA))
 ```
 
 ```{r q3-love-plot-interactions}
