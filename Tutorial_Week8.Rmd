@@ -40,6 +40,7 @@ library(broom)
 library(Synth)   
 library(stargazer)
 library(patchwork)
+library(cobalt)
 ```
 
 
@@ -453,8 +454,67 @@ knitr::kable(smd_df, digits = 3,
              caption = "Standardized Mean Differences Before and After Matching")
 ```
 
+```{r q3-smd}
+
+# Create three SEPARATE balance objects
+
+# Object 1: Raw (Unmatched) Data
+# We must specify estimand = "ATT" to get the right SMD denominator
+bal_raw <- bal.tab(
+  treat ~ inter + deaths + couprev + sos + drugs + t0 +
+    ethfrac + pop + lmtnest + milper +
+    eeurop + lamerica + asia + ssafrica,
+  data = dta_complete, 
+  estimand = "ATT" 
+)
+
+# Object 2: Logit-Matched Data
+bal_logit <- bal.tab(m_logit)
+
+# Object 3: RF-Matched Data
+bal_rf <- bal.tab(m_rf)
+```
+
+
 ```{r q3-love-plot-base}
 
+# Create the data frame
+smd_df <- data.frame(
+  Covariate = rownames(bal_raw$Balance),
+  Unadjusted = bal_raw$Balance$Diff.Un,
+  Logit_Matched = bal_logit$Balance$Diff.Adj,
+  RF_Matched = bal_rf$Balance$Diff.Adj
+)
+
+# Reshape data from wide to long format
+smd_long <- smd_df %>%
+  pivot_longer(
+    cols = -Covariate,
+    names_to = "Sample",
+    values_to = "SMD"    # New column for the SMD value
+  ) %>%
+  # We want to plot the absolute value
+  mutate(Absolute_SMD = abs(SMD))
+
+
+# Create the plot
+ggplot(smd_long, aes(x = Absolute_SMD, y = Covariate, color = Sample, shape = Sample)) +
+  geom_point(size = 3) +
+  geom_vline(xintercept = 0.1, linetype = "dashed", color = "black") +
+  labs(
+    title = "Covariate Balance Before and After Matching",
+    x = "Absolute Standardized Mean Difference",
+    y = "Covariate"
+  ) +
+  scale_color_manual(
+    name = "Sample",
+    values = c("Unadjusted" = "grey", "Logit_Matched" = "blue", "RF_Matched" = "red")
+  ) +
+  scale_shape_manual(
+    name = "Sample",
+    values = c("Unadjusted" = 15, "Logit_Matched" = 17, "RF_Matched" = 18)
+  ) +
+  theme_minimal()
 ```
 
 ```{r q3-love-plot-interactions}
