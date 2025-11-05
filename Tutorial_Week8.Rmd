@@ -834,8 +834,11 @@ However, the synthetic control method is based on the premise that when the unit
 
 **2.)**
 
+The case of West Germany is particularly suitable because no single country could serve as a good counterfactual comparison on its own. As an aggregate entity (a country), single comparisons often do not exist in comparative political science. The authors demonstrated that no single country from the donor pool (16 OECD countries) could closely approximate the values of pre-reunification economic growth predictors for West Germany. This lack of a good single match perfectly aligns with the synthetic control method's motivation, namely to construct a composite counterfactual from a weighted average of the donor pool. This weighted average (a combination of a few OECD countries) provided a very close approximation to West Germany's economic attributes and pre-treatment outcome path prior to 1990.
+
 **3.)**
 
+The key identification assumption of the synthetic control method is rooted in the belief that similar pre-treatment trajectories imply similar causal structures. The authors assume that if the unit representing the case of interest and the synthetic control exhibit similar outcomes over an extended period of time prior to the intervention, then any discrepancy in the outcome variable following the intervention is interpreted as a product of the intervention itself. The ultimate goal is for the synthetic control to accurately reproduce the unobserved counterfactual outcome path that the treated unit (West Germany) would have experienced in the absence of the treatment (reunification). Therefore, the method aims to find a weighted average of multiple control units that collectively replicates the entire pre-treatment trajectory of the outcome variable ($Y$ over $t$), in addition to matching on key predictor variables ($X$).
 
 ---
 
