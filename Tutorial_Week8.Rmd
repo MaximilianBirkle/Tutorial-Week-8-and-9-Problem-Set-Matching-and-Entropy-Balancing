@@ -898,6 +898,8 @@ According to the authors, this is exactly what we see in regression-based approa
 
 ---
 
+
+
 ## (c) Estimation, Balance Before & After
 
 ### Tasks:
@@ -908,26 +910,90 @@ According to the authors, this is exactly what we see in regression-based approa
 4. Interpret: which donor countries dominate and why?
 5. Assess whether pre-treatment fit is acceptable for credible inference
 
-```{r synth-estimation}
-# Prepare data for Synth package
 
+```{r synth-estimation, message=FALSE, warning=FALSE}
 
-# Run synthetic control estimation
+# Prepare data
 
+# Identify West Germany's index
+west_germany_id <- repgermany %>% 
+  filter(country == "West Germany") %>% 
+  pull(index) %>% 
+  unique()
 
+# Synthetic control estimation (silently)
+invisible(capture.output({
+  dataprep_out <- dataprep(
+    foo = as.data.frame(repgermany),
+    predictors = c("gdp", "trade", "infrate", "industry"),
+    predictors.op = "mean",
+    time.predictors.prior = 1981:1990,
+    special.predictors = list(
+      list("invest80", 1980:1985, "mean"),
+      list("schooling", 1980:1985, "mean")
+    ),
+    dependent = "gdp",
+    unit.variable = "index",
+    unit.names.variable = "country",
+    time.variable = "year",
+    treatment.identifier = west_germany_id,
+    controls.identifier = setdiff(unique(repgermany$index), west_germany_id),
+    time.optimize.ssr = 1960:1989,
+    time.plot = 1960:2003
+  )
+}))
+
+# Optimization (silently)
+invisible(capture.output({
+  synth_out <- synth(data.prep.obj = dataprep_out, method = "BFGS")
+}))
+
+# Compute RMSPE
+rmspe <- sqrt(mean((dataprep_out$Y1plot - dataprep_out$Y0plot %*% synth_out$solution.w)^2))
+cat("Pre-treatment RMSPE:", round(rmspe, 2), "\n")
 ```
 
 ```{r synth-balance-table}
 # Create balance table for pre-treatment predictors
 
+# Extract the balance table from synth output
+balance_table <- synth.tab(
+  dataprep.res = dataprep_out,
+  synth.res = synth_out
+)
 
+# Create a formatted balance table
+balance_df <- data.frame(
+  Predictor = c("GDP per capita", "Trade openness", "Inflation rate", 
+                "Industry share", "Schooling", "Investment rate"),
+  West_Germany = balance_table$tab.pred[, 1],
+  Synthetic_West_Germany = balance_table$tab.pred[, 2],
+  OECD_Sample = balance_table$tab.pred[, 3]
+)
+
+# Format the table
+knitr::kable(
+  balance_df,
+  format = "latex",
+  digits = 1,
+  col.names = c("Predictor", "West Germany", "Synthetic West Germany", "OECD Sample"),
+  caption = "Table: Economic Growth Predictor Means Before German Reunification",
+  align = c("l", "r", "r", "r")
+) %>%
+  kableExtra::kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    bootstrap_options = c("striped", "hover"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  kableExtra::footnote(
+    general = "GDP per capita, inflation rate, trade openness, and industry share are averaged for the 1981-1990 period. Investment rate and schooling are averaged for the 1980-1985 period. The OECD Sample column reports a population-weighted average for the 16 OECD countries in the donor pool.",
+    general_title = "Note:",
+    footnote_as_chunk = TRUE
+  )
 ```
 
-```{r synth-weights}
-# Report unit weights
 
-
-```
 
 **Interpretation:**
 
