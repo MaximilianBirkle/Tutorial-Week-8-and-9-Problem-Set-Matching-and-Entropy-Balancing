@@ -913,8 +913,8 @@ According to the authors, this is exactly what we see in regression-based approa
 
 ```{r synth-estimation, message=FALSE, warning=FALSE}
 
+# synth-estimation chunk
 # Prepare data
-
 # Identify West Germany's index
 west_germany_id <- repgermany %>% 
   filter(country == "West Germany") %>% 
@@ -941,10 +941,8 @@ invisible(capture.output({
     time.optimize.ssr = 1960:1989,
     time.plot = 1960:2003
   )
-}))
-
-# Optimization (silently)
-invisible(capture.output({
+  
+  # Optimization - moved inside same invisible block
   synth_out <- synth(data.prep.obj = dataprep_out, method = "BFGS")
 }))
 
@@ -954,9 +952,8 @@ cat("Pre-treatment RMSPE:", round(rmspe, 2), "\n")
 ```
 
 ```{r synth-balance-table}
+# synth-balance-table chunk
 # Create balance table for pre-treatment predictors
-
-# Extract the balance table from synth output
 balance_table <- synth.tab(
   dataprep.res = dataprep_out,
   synth.res = synth_out
@@ -967,33 +964,43 @@ balance_df <- data.frame(
   Predictor = c("GDP per capita", "Trade openness", "Inflation rate", 
                 "Industry share", "Schooling", "Investment rate"),
   West_Germany = balance_table$tab.pred[, 1],
-  Synthetic_West_Germany = balance_table$tab.pred[, 2],
-  OECD_Sample = balance_table$tab.pred[, 3]
+  Synthetic = balance_table$tab.pred[, 2],  # Simplified column name
+  OECD = balance_table$tab.pred[, 3]        # Simplified column name
 )
 
 # Format the table
 knitr::kable(
   balance_df,
-  format = "latex",
   digits = 1,
-  col.names = c("Predictor", "West Germany", "Synthetic West Germany", "OECD Sample"),
-  caption = "Table: Economic Growth Predictor Means Before German Reunification",
-  align = c("l", "r", "r", "r")
-) %>%
-  kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
-    bootstrap_options = c("striped", "hover"),
-    full_width = FALSE,
-    position = "center"
-  ) %>%
-  kableExtra::footnote(
-    general = "GDP per capita, inflation rate, trade openness, and industry share are averaged for the 1981-1990 period. Investment rate and schooling are averaged for the 1980-1985 period. The OECD Sample column reports a population-weighted average for the 16 OECD countries in the donor pool.",
-    general_title = "Note:",
-    footnote_as_chunk = TRUE
-  )
+  col.names = c("Predictor", "West Germany", "Synthetic", "OECD"),
+  caption = "Economic Growth Predictor Means Before German Reunification"
+)
 ```
 
+```{r country-weights-table, results='asis'}
+# Task 3: Report non-zero weights
 
+# Exclude the treated unit (West Germany)
+donor_names <- dataprep_out$names.and.numbers[-1, 1]
+
+weights_df <- data.frame(
+  Country = dataprep_out$names.and.numbers[-1, 1],
+  Weight = as.numeric(synth_out$solution.w)
+)
+
+nonzero_weights <- weights_df %>%
+  filter(Weight > 0.001) %>%
+  arrange(desc(Weight))
+
+knitr::kable(
+  nonzero_weights,
+  digits = 3,
+  col.names = c("Country", "Synthetic Control Weight"),
+  caption = "Non-Zero Weights for Synthetic West Germany"
+)
+
+
+```
 
 **Interpretation:**
 
