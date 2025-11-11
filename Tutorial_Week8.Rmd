@@ -1153,13 +1153,25 @@ rmspe_ratio_placebo <- post_rmspe_placebo / pre_rmspe_placebo
 
 # Calculate p-value: proportion of placebos with ratio >= West Germany's ratio
 p_value <- mean(rmspe_ratio_placebo >= rmspe_ratio_wg, na.rm = TRUE)
+rank_wg <- sum(rmspe_ratio_placebo >= rmspe_ratio_wg, na.rm = TRUE) + 1
+total_units <- sum(!is.na(rmspe_ratio_placebo)) + 1
 
-cat("\n=== PERMUTATION TEST RESULTS ===\n")
-cat("West Germany RMSPE ratio:", round(rmspe_ratio_wg, 3), "\n")
-cat("Rank of West Germany:", 
-    sum(rmspe_ratio_placebo >= rmspe_ratio_wg, na.rm = TRUE) + 1, 
-    "out of", sum(!is.na(rmspe_ratio_placebo)) + 1, "\n")
-cat("Approximate p-value:", round(p_value, 3), "\n\n")
+# Create a summary data frame
+perm_test_results <- data.frame(
+  Metric = c("West Germany RMSPE Ratio", "Rank of West Germany", "Total Units", "Approximate p-value"),
+  Value = c(round(rmspe_ratio_wg, 3), rank_wg, total_units, round(p_value, 3))
+)
+
+perm_test_results %>%
+  kable(
+    caption = "Permutation (Placebo) Test Results for Synthetic Control Analysis",
+    col.names = c("Metric", "Value")
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover", "condensed")
+  ) 
+
 ```
 
 ```{r synth-placebo-plots}
@@ -1293,14 +1305,27 @@ pre_rmspe_placebo_1975 <- sqrt(mean(gaps_placebo_1975[pre_placebo_idx]^2))
 post_rmspe_placebo_1975 <- sqrt(mean(gaps_placebo_1975[post_placebo_idx]^2))
 rmspe_ratio_placebo_1975 <- post_rmspe_placebo_1975 / pre_rmspe_placebo_1975
 
-cat("\n=== PLACEBO TEST (1975) RESULTS ===\n")
-cat("Pre-placebo RMSPE (1960-1974):", round(pre_rmspe_placebo_1975, 2), "\n")
-cat("Post-placebo RMSPE (1975-2003):", round(post_rmspe_placebo_1975, 2), "\n")
-cat("RMSPE Ratio:", round(rmspe_ratio_placebo_1975, 3), "\n\n")
+# Compare to actual treatment (1990)
+results_table <- data.frame(
+  Scenario = c("Placebo Treatment (1975)", "Actual Treatment (1990)"),
+  Pre_RMSPE = c(pre_rmspe_placebo_1975, NA),
+  Post_RMSPE = c(post_rmspe_placebo_1975, NA),
+  RMSPE_Ratio = c(rmspe_ratio_placebo_1975, rmspe_ratio_wg)
+)
 
-# Compare to actual treatment
-cat("For comparison:\n")
-cat("Actual treatment (1990) RMSPE ratio:", round(rmspe_ratio_wg, 3), "\n")
+# Display nicely
+results_table %>%
+  mutate(
+    Pre_RMSPE = round(Pre_RMSPE, 2),
+    Post_RMSPE = round(Post_RMSPE, 2),
+    RMSPE_Ratio = round(RMSPE_Ratio, 3)
+  ) %>%
+  kable(
+    caption = "Placebo (1975) vs Actual (1990) RMSPE Comparison",
+    col.names = c("Scenario", "Pre RMSPE", "Post RMSPE", "RMSPE Ratio")
+  ) %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+
 ```
 
 **Interpretation (Tasks e.3-4):**
