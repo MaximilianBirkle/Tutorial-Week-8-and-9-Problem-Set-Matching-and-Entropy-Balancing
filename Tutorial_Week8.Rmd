@@ -805,7 +805,6 @@ Using the synthetic control method, we construct a counterfactual "synthetic Wes
 load("repgermany.RData")
 repgermany <- x
 
-
 # Display structure
 #str(repgermany)
 #head(repgermany)
@@ -899,8 +898,6 @@ According to the authors, this is exactly what we see in regression-based approa
 
 ---
 
-
-
 ## (c) Estimation, Balance Before & After
 
 ### Tasks:
@@ -911,12 +908,8 @@ According to the authors, this is exactly what we see in regression-based approa
 4. Interpret: which donor countries dominate and why?
 5. Assess whether pre-treatment fit is acceptable for credible inference
 
-
 ```{r synth-estimation, message=FALSE, warning=FALSE}
-
-# synth-estimation chunk
-# Prepare data
-# Identify West Germany's index
+# Prepare data and identify West Germany's index
 west_germany_id <- repgermany %>% 
   filter(country == "West Germany") %>% 
   pull(index) %>% 
@@ -943,16 +936,13 @@ invisible(capture.output({
     time.plot = 1960:2003
   )
   
-  # Optimization - moved inside same invisible block
+  # Optimization
   synth_out <- synth(data.prep.obj = dataprep_out, method = "BFGS")
 }))
 ```
 
 ```{r synth-balance-table}
-# synth-balance-table chunk
-# Create balance table for pre-treatment predictors (GDP, trade opennesss, 
-# inflation, schooling, investment)
-
+# Create balance table for pre-treatment predictors
 balance_table <- synth.tab(
   dataprep.res = dataprep_out,
   synth.res = synth_out
@@ -963,8 +953,8 @@ balance_df <- data.frame(
   Predictor = c("GDP per capita", "Trade openness", "Inflation rate", 
                 "Industry share", "Schooling", "Investment rate"),
   West_Germany = balance_table$tab.pred[, 1],
-  Synthetic = balance_table$tab.pred[, 2],  # Simplified column name
-  OECD = balance_table$tab.pred[, 3]        # Simplified column name
+  Synthetic = balance_table$tab.pred[, 2],
+  OECD = balance_table$tab.pred[, 3]
 )
 
 # Format the table
@@ -976,12 +966,8 @@ knitr::kable(
 )
 ```
 
-```{r country-weights-table, results='asis'}
-# Task 3: Report non-zero weights
-
-# Exclude the treated unit (West Germany)
-donor_names <- dataprep_out$names.and.numbers[-1, 1]
-
+```{r synth-weights-table}
+# Report non-zero weights
 weights_df <- data.frame(
   Country = dataprep_out$names.and.numbers[-1, 1],
   Weight = as.numeric(synth_out$solution.w)
@@ -997,11 +983,12 @@ knitr::kable(
   col.names = c("Country", "Synthetic Control Weight"),
   caption = "Non-Zero Weights for Synthetic West Germany"
 )
+```
 
-#Optional: visualize country weights
-# Create a lookup table from dataprep_out
+```{r synth-weights-plot}
+# Visualize country weights
 lookup <- dataprep_out$names.and.numbers
-weights_df <- data.frame(
+weights_plot_df <- data.frame(
   Unit = as.numeric(rownames(synth_out$solution.w)),
   Weight = synth_out$solution.w[, 1]
 ) %>%
@@ -1010,7 +997,7 @@ weights_df <- data.frame(
   filter(Weight > 0.001) %>%
   arrange(desc(Weight))
 
-ggplot(weights_df, aes(x = reorder(Country, Weight), y = Weight)) +
+ggplot(weights_plot_df, aes(x = reorder(Country, Weight), y = Weight)) +
   geom_col(fill = "steelblue") +
   coord_flip() +
   labs(
@@ -1037,27 +1024,45 @@ ggplot(weights_df, aes(x = reorder(Country, Weight), y = Weight)) +
 4. Report where treated unit's gap falls in the distribution (approximate p-value)
 5. Interpret: What does this suggest about the economic impact of reunification?
 
-```{r synth-plot-trajectory}
-# Plot actual vs synthetic West Germany
+```{r synth-trajectory-plot}
+# Task (d) 1: Plot actual vs synthetic GDP per capita trajectory
 path.plot(
-synth.res = synth_out,
-dataprep.res = dataprep_out,
-Ylab = "Real GDP per capita (1985 USD, thousand)",
-Xlab = "Year",
-Ylim = c(15000, 35000),
-Legend = c("West Germany", "Synthetic West Germany"),
-Legend.position = "topleft",
-Main = "West Germany vs. Synthetic Control: GDP per Capita"
+  synth.res = synth_out,
+  dataprep.res = dataprep_out,
+  Ylab = "Real GDP per capita (1985 USD, thousand)",
+  Xlab = "Year",
+  Ylim = c(15000, 35000),
+  Legend = c("West Germany", "Synthetic West Germany"),
+  Legend.position = "topleft",
+  Main = "West Germany vs. Synthetic Control: GDP per Capita"
 )
 
+# Add vertical line at treatment year
+abline(v = 1990, lty = 2, col = "red")
 ```
 
 ```{r synth-gap-calculation}
+# Task (d) 2: Calculate estimated effect gaps
 
 # Calculate the raw gaps (Treated - Synthetic)
 gaps <- dataprep_out$Y1plot - (dataprep_out$Y0plot %*% synth_out$solution.w)
+years <- as.numeric(rownames(gaps))
 
-# --- Task (d) 1: Plot the Gap ---
+# First few post-treatment years (1990-1992)
+first_years_idx <- years %in% 1990:1992
+avg_gap_first_years <- mean(gaps[first_years_idx])
+
+# Average post-treatment gap (1990-2003)
+post_years_idx <- years >= 1990
+avg_gap_post <- mean(gaps[post_years_idx])
+
+# Print results
+cat("Average gap in first post-treatment years (1990-1992):", 
+    round(avg_gap_first_years, 2), "USD\n")
+cat("Average post-treatment gap (1990-2003):", 
+    round(avg_gap_post, 2), "USD\n\n")
+
+# Plot the gap over time
 gaps.plot(
   synth.res = synth_out,
   dataprep.res = dataprep_out,
@@ -1066,60 +1071,139 @@ gaps.plot(
   Main = "Effect of Reunification on GDP per Capita",
   Ylim = c(-7000, 2000)
 )
-
-# --- Task (d) 2/3/4: Calculate and Present Metrics in a Table ---
-
-# Define time periods for calculating average effects and RMSPE
-all_post_years <- 1990:2003
-first_few_years <- 1990:1991
-years <- as.numeric(rownames(dataprep_out$Y1plot))
-pre_period <- years < 1990
-post_period <- years >= 1990
-
-# Calculate metrics
-avg_gap_full_post <- mean(gaps[rownames(dataprep_out$Y1plot) %in% all_post_years])
-avg_gap_first_years <- mean(gaps[rownames(dataprep_out$Y1plot) %in% first_few_years])
-pre_rmspe <- sqrt(mean(gaps[pre_period]^2))
-post_rmspe <- sqrt(mean(gaps[post_period]^2))
-rmspe_ratio <- post_rmspe / pre_rmspe
-
-# Create Data Frame for Table
-results_df <- data.frame(
-  Metric = c(
-    "Average Post-Treatment Gap (1990–2003)",
-    "Average Initial Gap (1990–1991)",
-    "Pre-treatment RMSPE (1960–1989)",
-    "Post-treatment RMSPE (1990–2003)",
-    "RMSPE Ratio (Post / Pre)"
-  ),
-  Value = c(
-    avg_gap_full_post,
-    avg_gap_first_years,
-    pre_rmspe,
-    post_rmspe,
-    rmspe_ratio
-  )
-)
-
-# Format the table using kable
-results_table <- knitr::kable(
-  results_df,
-  digits = 2,
-  col.names = c("Metric", "Value (USD / Ratio)"),
-  caption = "Summary of Estimated Treatment Effects and Fit Metrics"
-)
-
-# Apply kableExtra styling
-if (knitr::is_latex_output() || knitr::is_html_output()) {
-  results_table <- results_table %>%
-    kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
-}
-
-results_table
-
-
 ```
 
+```{r synth-permutation-test}
+# Tasks (d) 3-4: Perform permutation (placebo) test
+
+# Get list of all control units
+control_units <- setdiff(unique(repgermany$index), west_germany_id)
+
+# Store results
+placebo_gaps <- matrix(NA, nrow = length(years), ncol = length(control_units))
+colnames(placebo_gaps) <- control_units
+rownames(placebo_gaps) <- years
+
+# Store RMSPE for each placebo
+pre_rmspe_placebo <- numeric(length(control_units))
+post_rmspe_placebo <- numeric(length(control_units))
+
+cat("Running permutation test for", length(control_units), "control units...\n")
+
+# Loop through each control unit and run synthetic control
+for (i in 1:length(control_units)) {
+  
+  placebo_unit <- control_units[i]
+  
+  # Skip if this would cause issues
+  tryCatch({
+    
+    # Suppress output
+    invisible(capture.output({
+      
+      # Prepare data with current control unit as "treated"
+      dataprep_placebo <- dataprep(
+        foo = as.data.frame(repgermany),
+        predictors = c("gdp", "trade", "infrate", "industry"),
+        predictors.op = "mean",
+        time.predictors.prior = 1981:1990,
+        special.predictors = list(
+          list("invest80", 1980:1985, "mean"),
+          list("schooling", 1980:1985, "mean")
+        ),
+        dependent = "gdp",
+        unit.variable = "index",
+        unit.names.variable = "country",
+        time.variable = "year",
+        treatment.identifier = placebo_unit,
+        controls.identifier = setdiff(unique(repgermany$index), placebo_unit),
+        time.optimize.ssr = 1960:1989,
+        time.plot = 1960:2003
+      )
+      
+      # Run synthetic control
+      synth_placebo <- synth(data.prep.obj = dataprep_placebo, method = "BFGS")
+      
+    }))
+    
+    # Calculate gaps for this placebo
+    placebo_gaps[, i] <- dataprep_placebo$Y1plot - 
+      (dataprep_placebo$Y0plot %*% synth_placebo$solution.w)
+    
+    # Calculate RMSPE
+    pre_idx <- years < 1990
+    post_idx <- years >= 1990
+    pre_rmspe_placebo[i] <- sqrt(mean(placebo_gaps[pre_idx, i]^2))
+    post_rmspe_placebo[i] <- sqrt(mean(placebo_gaps[post_idx, i]^2))
+    
+  }, error = function(e) {
+    cat("Error with unit", placebo_unit, "\n")
+  })
+}
+
+# Calculate RMSPE for actual West Germany
+pre_idx <- years < 1990
+post_idx <- years >= 1990
+pre_rmspe_wg <- sqrt(mean(gaps[pre_idx]^2))
+post_rmspe_wg <- sqrt(mean(gaps[post_idx]^2))
+rmspe_ratio_wg <- post_rmspe_wg / pre_rmspe_wg
+
+# Calculate RMSPE ratios for placebos
+rmspe_ratio_placebo <- post_rmspe_placebo / pre_rmspe_placebo
+
+# Calculate p-value: proportion of placebos with ratio >= West Germany's ratio
+p_value <- mean(rmspe_ratio_placebo >= rmspe_ratio_wg, na.rm = TRUE)
+
+cat("\n=== PERMUTATION TEST RESULTS ===\n")
+cat("West Germany RMSPE ratio:", round(rmspe_ratio_wg, 3), "\n")
+cat("Rank of West Germany:", 
+    sum(rmspe_ratio_placebo >= rmspe_ratio_wg, na.rm = TRUE) + 1, 
+    "out of", sum(!is.na(rmspe_ratio_placebo)) + 1, "\n")
+cat("Approximate p-value:", round(p_value, 3), "\n\n")
+```
+
+```{r synth-placebo-plots}
+# Plot: West Germany gap vs all placebo gaps
+gaps.plot(
+  synth.res = synth_out,
+  dataprep.res = dataprep_out,
+  Ylab = "GDP per capita gap",
+  Xlab = "Year",
+  Main = "West Germany vs. Placebo Tests",
+  Ylim = c(-7000, 7000)
+)
+
+# Add placebo lines
+for (i in 1:ncol(placebo_gaps)) {
+  lines(years, placebo_gaps[, i], col = "gray", lwd = 0.5)
+}
+
+# Re-add West Germany line on top
+lines(years, gaps, col = "black", lwd = 2)
+abline(v = 1990, lty = 2, col = "red")
+legend("bottomleft", 
+       legend = c("West Germany", "Placebo units"),
+       col = c("black", "gray"),
+       lwd = c(2, 1))
+
+# Alternative plot: RMSPE ratio distribution
+hist(rmspe_ratio_placebo, 
+     breaks = 20,
+     main = "Distribution of Post/Pre RMSPE Ratios",
+     xlab = "RMSPE Ratio (Post/Pre)",
+     col = "lightblue",
+     border = "white")
+abline(v = rmspe_ratio_wg, col = "red", lwd = 2, lty = 2)
+legend("topright", 
+       legend = "West Germany",
+       col = "red",
+       lwd = 2,
+       lty = 2)
+```
+
+**Interpretation (Task d.5):**
+
+[What does this suggest about the economic impact of reunification?]
 
 ---
 
@@ -1133,22 +1217,21 @@ results_table
 4. Comment on how convincing you find the main causal estimate
 
 ```{r synth-placebo-pretreatment}
+# Task (e) 1: Conduct placebo test with earlier treatment year
 
-# Define the placebo year (e.g., 1975)
+# Define the placebo year
 placebo_year <- 1975
-west_germany_id <- unique(repgermany[repgermany$country == "West Germany", "index"]) # Re-define ID if needed
 
-# 1. Prepare data for the placebo run
+# Prepare data for the placebo run
 invisible(capture.output({
-  dataprep_placebo <- dataprep(
+  dataprep_placebo_1975 <- dataprep(
     foo = as.data.frame(repgermany),
     predictors = c("gdp", "trade", "infrate", "industry"),
     predictors.op = "mean",
-    # Standard predictors use the period prior to T_0=1975 (1965-1974)
+    # Use period prior to placebo year for predictors
     time.predictors.prior = 1965:1974, 
     special.predictors = list(
-      # KEEP the original, data-available time period for static predictors
-      # If data for 'invest80' and 'schooling' starts around 1980, use that range:
+      # Keep original time period for static predictors
       list("invest80", 1980:1985, "mean"), 
       list("schooling", 1980:1985, "mean")
     ),
@@ -1158,45 +1241,70 @@ invisible(capture.output({
     time.variable = "year",
     treatment.identifier = west_germany_id,
     controls.identifier = setdiff(unique(repgermany$index), west_germany_id),
-    time.optimize.ssr = 1960:(placebo_year - 1), # Optimization up to 1974
+    # Optimize up to placebo year
+    time.optimize.ssr = 1960:(placebo_year - 1),
     time.plot = 1960:2003
   )
 
-  # 2. Re-estimate Synthetic Control
-  synth_placebo <- synth(data.prep.obj = dataprep_placebo, method = "BFGS")
+  # Re-estimate Synthetic Control
+  synth_placebo_1975 <- synth(data.prep.obj = dataprep_placebo_1975, method = "BFGS")
 }))
-
-# 3. Plot the gap for the placebo run (main requirement)
-gaps.plot(
-  synth.res = synth_placebo,
-  dataprep.res = dataprep_placebo,
-  Ylab = "GDP per capita gap (West Germany - Synthetic)",
-  Xlab = "Year",
-  Main = paste0("Placebo Test: Treatment Year = ", placebo_year),
-  Ylim = c(-7000, 2000)
-)
-
 ```
 
-**Interpretation:**
+```{r synth-placebo-plot}
+# Task (e) 2: Plot the gap for the placebo run
 
-[Does the placebo test support the validity of the main estimate?]
+# Plot trajectory
+path.plot(
+  synth.res = synth_placebo_1975,
+  dataprep.res = dataprep_placebo_1975,
+  Ylab = "Real GDP per capita (1985 USD, thousand)",
+  Xlab = "Year",
+  Ylim = c(15000, 35000),
+  Legend = c("West Germany", "Synthetic West Germany (Placebo)"),
+  Legend.position = "topleft",
+  Main = paste0("Placebo Test: Treatment Year = ", placebo_year)
+)
+abline(v = placebo_year, lty = 2, col = "red")
 
-\newpage
+# Plot the gap
+gaps.plot(
+  synth.res = synth_placebo_1975,
+  dataprep.res = dataprep_placebo_1975,
+  Ylab = "GDP per capita gap (West Germany - Synthetic)",
+  Xlab = "Year",
+  Main = paste0("Placebo Test Gap: Treatment Year = ", placebo_year),
+  Ylim = c(-7000, 2000)
+)
+abline(v = placebo_year, lty = 2, col = "red")
+```
 
-# Conclusion
+```{r synth-placebo-analysis}
+# Calculate gaps for placebo test
+gaps_placebo_1975 <- dataprep_placebo_1975$Y1plot - 
+  (dataprep_placebo_1975$Y0plot %*% synth_placebo_1975$solution.w)
+years_placebo <- as.numeric(rownames(gaps_placebo_1975))
 
-[Optional: Summarize key findings from both parts]
+# Calculate RMSPE before and after placebo treatment
+pre_placebo_idx <- years_placebo < placebo_year
+post_placebo_idx <- years_placebo >= placebo_year
 
----
+pre_rmspe_placebo_1975 <- sqrt(mean(gaps_placebo_1975[pre_placebo_idx]^2))
+post_rmspe_placebo_1975 <- sqrt(mean(gaps_placebo_1975[post_placebo_idx]^2))
+rmspe_ratio_placebo_1975 <- post_rmspe_placebo_1975 / pre_rmspe_placebo_1975
 
-# References
+cat("\n=== PLACEBO TEST (1975) RESULTS ===\n")
+cat("Pre-placebo RMSPE (1960-1974):", round(pre_rmspe_placebo_1975, 2), "\n")
+cat("Post-placebo RMSPE (1975-2003):", round(post_rmspe_placebo_1975, 2), "\n")
+cat("RMSPE Ratio:", round(rmspe_ratio_placebo_1975, 3), "\n\n")
 
-- Abadie, A., & Spiess, J. (2021). Robust Post-Matching Inference. *Journal of the American Statistical Association.*
-- Rosenbaum, P., & Rubin, D. (1983). The Central Role of the Propensity Score in Observational Studies for Causal Effects. *Biometrika.*
-- Abadie, A., & Imbens, G. (2006). Large Sample Properties of Matching Estimators for Average Treatment Effects. *Econometrica.*
-- Gilligan, M., & Sergenti, E. (2008). Do UN Interventions Cause Peace? Using Matching to Improve Causal Inference. *Quarterly Journal of Political Science.*
-- Abadie, A., Diamond, A., & Hainmueller, J. (2015). Comparative Politics and the Synthetic Control Method. *American Journal of Political Science*, 59(2), 495–510.
-- Abadie, A. (2021). Using Synthetic Controls: Feasibility, Data Requirements, and Methodological Aspects. *Journal of Economic Literature*, 59(2), 391–425.
+# Compare to actual treatment
+cat("For comparison:\n")
+cat("Actual treatment (1990) RMSPE ratio:", round(rmspe_ratio_wg, 3), "\n")
+```
+
+**Interpretation (Tasks e.3-4):**
+
+[What does pre-treatment gap behavior tell you about parallel-trajectory assumption? How convincing is the main causal estimate?]
 
 ---
