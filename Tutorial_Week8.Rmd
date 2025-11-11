@@ -1020,23 +1020,61 @@ knitr::kable(
 
 ```{r synth-plot-trajectory}
 # Plot actual vs synthetic West Germany
-
+path.plot(
+synth.res = synth_out,
+dataprep.res = dataprep_out,
+Ylab = "Real GDP per capita (1985 USD, thousand)",
+Xlab = "Year",
+Ylim = c(15000, 35000),
+Legend = c("West Germany", "Synthetic West Germany"),
+Legend.position = "topleft",
+Main = "West Germany vs. Synthetic Control: GDP per Capita"
+)
 
 ```
 
 ```{r synth-gap-calculation}
 # Calculate treatment effect (gap)
-
+gaps <- dataprep_out$Y1plot - (dataprep_out$Y0plot %*% synth_out$solution.w)
+gaps.plot(
+synth.res = synth_out,
+dataprep.res = dataprep_out,
+Ylab = "GDP per capita gap (West Germany - Synthetic)",
+Xlab = "Year",
+Main = "Effect of Reunification on GDP per Capita",
+Ylim = c(-7000, 2000)
+)
 
 ```
 
 ```{r synth-permutation-test}
-# Permutation test: assign treatment to each control
+#Report post-treatment average effect (1990–2003)
+post_years <- 1990:2003
+avg_gap_post <- mean(gaps[rownames(dataprep_out$Y1plot) %in% post_years])
+cat("Average post-1990 GDP per capita gap (West Germany - Synthetic):",
+round(avg_gap_post, 2), "\n")
 
+#Optional: visualize country weights
+# Create a lookup table from dataprep_out
+lookup <- dataprep_out$names.and.numbers
+weights_df <- data.frame(
+  Unit = as.numeric(rownames(synth_out$solution.w)),
+  Weight = synth_out$solution.w[, 1]
+) %>%
+  left_join(lookup, by = c("Unit" = "unit.numbers")) %>%
+  rename(Country = unit.names) %>%
+  filter(Weight > 0.001) %>%
+  arrange(desc(Weight))
 
-# Calculate p-value
-
-
+ggplot(weights_df, aes(x = reorder(Country, Weight), y = Weight)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Synthetic Control Weights",
+    x = "Country",
+    y = "Weight"
+  ) +
+  theme_minimal()
 ```
 
 **Interpretation:**
