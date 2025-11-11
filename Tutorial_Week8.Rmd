@@ -1069,7 +1069,7 @@ gaps.plot(
   Ylab = "GDP per capita gap (West Germany - Synthetic)",
   Xlab = "Year",
   Main = "Effect of Reunification on GDP per Capita",
-  Ylim = c(-7000, 2000)
+  Ylim = c(-7000,7000)
 )
 ```
 
@@ -1260,7 +1260,7 @@ path.plot(
   dataprep.res = dataprep_placebo_1975,
   Ylab = "Real GDP per capita (1985 USD, thousand)",
   Xlab = "Year",
-  Ylim = c(15000, 35000),
+  Ylim = c(0, 35000),
   Legend = c("West Germany", "Synthetic West Germany (Placebo)"),
   Legend.position = "topleft",
   Main = paste0("Placebo Test: Treatment Year = ", placebo_year)
@@ -1274,7 +1274,7 @@ gaps.plot(
   Ylab = "GDP per capita gap (West Germany - Synthetic)",
   Xlab = "Year",
   Main = paste0("Placebo Test Gap: Treatment Year = ", placebo_year),
-  Ylim = c(-7000, 2000)
+  Ylim = c(-7000,7000)
 )
 abline(v = placebo_year, lty = 2, col = "red")
 ```
