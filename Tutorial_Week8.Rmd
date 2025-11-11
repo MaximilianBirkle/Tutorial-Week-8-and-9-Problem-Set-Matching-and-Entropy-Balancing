@@ -41,6 +41,7 @@ library(Synth)
 library(stargazer)
 library(patchwork)
 library(cobalt)
+library(Synth)
 ```
 
 
@@ -945,15 +946,13 @@ invisible(capture.output({
   # Optimization - moved inside same invisible block
   synth_out <- synth(data.prep.obj = dataprep_out, method = "BFGS")
 }))
-
-# Compute RMSPE
-rmspe <- sqrt(mean((dataprep_out$Y1plot - dataprep_out$Y0plot %*% synth_out$solution.w)^2))
-cat("Pre-treatment RMSPE:", round(rmspe, 2), "\n")
 ```
 
 ```{r synth-balance-table}
 # synth-balance-table chunk
-# Create balance table for pre-treatment predictors
+# Create balance table for pre-treatment predictors (GDP, trade opennesss, 
+# inflation, schooling, investment)
+
 balance_table <- synth.tab(
   dataprep.res = dataprep_out,
   synth.res = synth_out
@@ -999,7 +998,27 @@ knitr::kable(
   caption = "Non-Zero Weights for Synthetic West Germany"
 )
 
+#Optional: visualize country weights
+# Create a lookup table from dataprep_out
+lookup <- dataprep_out$names.and.numbers
+weights_df <- data.frame(
+  Unit = as.numeric(rownames(synth_out$solution.w)),
+  Weight = synth_out$solution.w[, 1]
+) %>%
+  left_join(lookup, by = c("Unit" = "unit.numbers")) %>%
+  rename(Country = unit.names) %>%
+  filter(Weight > 0.001) %>%
+  arrange(desc(Weight))
 
+ggplot(weights_df, aes(x = reorder(Country, Weight), y = Weight)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Synthetic Control Weights",
+    x = "Country",
+    y = "Weight"
+  ) +
+  theme_minimal()
 ```
 
 **Interpretation:**
@@ -1034,52 +1053,73 @@ Main = "West Germany vs. Synthetic Control: GDP per Capita"
 ```
 
 ```{r synth-gap-calculation}
-# Calculate treatment effect (gap)
+
+# Calculate the raw gaps (Treated - Synthetic)
 gaps <- dataprep_out$Y1plot - (dataprep_out$Y0plot %*% synth_out$solution.w)
+
+# --- Task (d) 1: Plot the Gap ---
 gaps.plot(
-synth.res = synth_out,
-dataprep.res = dataprep_out,
-Ylab = "GDP per capita gap (West Germany - Synthetic)",
-Xlab = "Year",
-Main = "Effect of Reunification on GDP per Capita",
-Ylim = c(-7000, 2000)
+  synth.res = synth_out,
+  dataprep.res = dataprep_out,
+  Ylab = "GDP per capita gap (West Germany - Synthetic)",
+  Xlab = "Year",
+  Main = "Effect of Reunification on GDP per Capita",
+  Ylim = c(-7000, 2000)
 )
 
+# --- Task (d) 2/3/4: Calculate and Present Metrics in a Table ---
+
+# Define time periods for calculating average effects and RMSPE
+all_post_years <- 1990:2003
+first_few_years <- 1990:1991
+years <- as.numeric(rownames(dataprep_out$Y1plot))
+pre_period <- years < 1990
+post_period <- years >= 1990
+
+# Calculate metrics
+avg_gap_full_post <- mean(gaps[rownames(dataprep_out$Y1plot) %in% all_post_years])
+avg_gap_first_years <- mean(gaps[rownames(dataprep_out$Y1plot) %in% first_few_years])
+pre_rmspe <- sqrt(mean(gaps[pre_period]^2))
+post_rmspe <- sqrt(mean(gaps[post_period]^2))
+rmspe_ratio <- post_rmspe / pre_rmspe
+
+# Create Data Frame for Table
+results_df <- data.frame(
+  Metric = c(
+    "Average Post-Treatment Gap (1990–2003)",
+    "Average Initial Gap (1990–1991)",
+    "Pre-treatment RMSPE (1960–1989)",
+    "Post-treatment RMSPE (1990–2003)",
+    "RMSPE Ratio (Post / Pre)"
+  ),
+  Value = c(
+    avg_gap_full_post,
+    avg_gap_first_years,
+    pre_rmspe,
+    post_rmspe,
+    rmspe_ratio
+  )
+)
+
+# Format the table using kable
+results_table <- knitr::kable(
+  results_df,
+  digits = 2,
+  col.names = c("Metric", "Value (USD / Ratio)"),
+  caption = "Summary of Estimated Treatment Effects and Fit Metrics"
+)
+
+# Apply kableExtra styling
+if (knitr::is_latex_output() || knitr::is_html_output()) {
+  results_table <- results_table %>%
+    kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
+}
+
+results_table
+
+
 ```
 
-```{r synth-permutation-test}
-#Report post-treatment average effect (1990–2003)
-post_years <- 1990:2003
-avg_gap_post <- mean(gaps[rownames(dataprep_out$Y1plot) %in% post_years])
-cat("Average post-1990 GDP per capita gap (West Germany - Synthetic):",
-round(avg_gap_post, 2), "\n")
-
-#Optional: visualize country weights
-# Create a lookup table from dataprep_out
-lookup <- dataprep_out$names.and.numbers
-weights_df <- data.frame(
-  Unit = as.numeric(rownames(synth_out$solution.w)),
-  Weight = synth_out$solution.w[, 1]
-) %>%
-  left_join(lookup, by = c("Unit" = "unit.numbers")) %>%
-  rename(Country = unit.names) %>%
-  filter(Weight > 0.001) %>%
-  arrange(desc(Weight))
-
-ggplot(weights_df, aes(x = reorder(Country, Weight), y = Weight)) +
-  geom_col(fill = "steelblue") +
-  coord_flip() +
-  labs(
-    title = "Synthetic Control Weights",
-    x = "Country",
-    y = "Weight"
-  ) +
-  theme_minimal()
-```
-
-**Interpretation:**
-
-[What is the estimated effect? Is it statistically significant based on permutation test?]
 
 ---
 
@@ -1093,11 +1133,48 @@ ggplot(weights_df, aes(x = reorder(Country, Weight), y = Weight)) +
 4. Comment on how convincing you find the main causal estimate
 
 ```{r synth-placebo-pretreatment}
-# Placebo test with fake treatment year
 
+# Define the placebo year (e.g., 1975)
+placebo_year <- 1975
+west_germany_id <- unique(repgermany[repgermany$country == "West Germany", "index"]) # Re-define ID if needed
 
-# Plot placebo gap
+# 1. Prepare data for the placebo run
+invisible(capture.output({
+  dataprep_placebo <- dataprep(
+    foo = as.data.frame(repgermany),
+    predictors = c("gdp", "trade", "infrate", "industry"),
+    predictors.op = "mean",
+    # Standard predictors use the period prior to T_0=1975 (1965-1974)
+    time.predictors.prior = 1965:1974, 
+    special.predictors = list(
+      # KEEP the original, data-available time period for static predictors
+      # If data for 'invest80' and 'schooling' starts around 1980, use that range:
+      list("invest80", 1980:1985, "mean"), 
+      list("schooling", 1980:1985, "mean")
+    ),
+    dependent = "gdp",
+    unit.variable = "index",
+    unit.names.variable = "country",
+    time.variable = "year",
+    treatment.identifier = west_germany_id,
+    controls.identifier = setdiff(unique(repgermany$index), west_germany_id),
+    time.optimize.ssr = 1960:(placebo_year - 1), # Optimization up to 1974
+    time.plot = 1960:2003
+  )
 
+  # 2. Re-estimate Synthetic Control
+  synth_placebo <- synth(data.prep.obj = dataprep_placebo, method = "BFGS")
+}))
+
+# 3. Plot the gap for the placebo run (main requirement)
+gaps.plot(
+  synth.res = synth_placebo,
+  dataprep.res = dataprep_placebo,
+  Ylab = "GDP per capita gap (West Germany - Synthetic)",
+  Xlab = "Year",
+  Main = paste0("Placebo Test: Treatment Year = ", placebo_year),
+  Ylim = c(-7000, 2000)
+)
 
 ```
 
