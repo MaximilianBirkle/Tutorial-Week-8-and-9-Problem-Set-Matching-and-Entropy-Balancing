@@ -756,30 +756,74 @@ In summary, these Q3 diagnostics aren't a success story—they're a critical fin
 4. (Optional) Trim observations outside common support and re-compute ATT
 5. Examine matched subsets - do matches seem like fair counterfactuals?
 
-```{r q4-overlap-stats}
-# Min/max propensity scores by treatment group
+**Interpretation Q4.1**
 
+To kick off our overlap diagnostics, we first just looked at the simple min/max range of our propensity scores from both models.
+At first glance, the numbers tell a really clear story. For our 139 control units (the "No UN" group), the p-scores are all jammed at the low end. The logistic model gave them a max score of just 0.194, and the random forest was even tighter at 0.188. This just confirms the model is doing its job and thinks these conflicts had almost no chance of getting an intervention.
+In sharp contrast, our 15 treated units are all over the place. The logistic model's scores go all the way up to 0.884, and the random forest goes up to 0.504.
+What this tells us, before we even get to the next step, is that our common support is paper-thin. We have treated units with p-scores of 0.8, 0.6, and 0.5, but our entire pool of controls stops at 0.19. We have no one to match these high-score treated units to. This simple range check is the first big red flag that proves our overlap is terrible.
 
-# Proportion in common support
+```{r q4-overlap-proportion}
 
+# For the LOGIT Model
 
+# Get the min/max p-score of the CONTROL group (the "common support")
+control_support_logit <- range(dta_complete$ps_logistic_probs[dta_complete$treat == 0], na.rm = TRUE)
+
+# Count how many TREATED units fall INSIDE that range
+treated_on_support_logit <- sum(
+  dta_complete$ps_logistic_probs[dta_complete$treat == 1] >= control_support_logit[1] &
+  dta_complete$ps_logistic_probs[dta_complete$treat == 1] <= control_support_logit[2],
+  na.rm = TRUE
+)
+
+# Get total treated units (should be 15 from dta_complete)
+total_treated <- sum(dta_complete$treat == 1, na.rm = TRUE)
+
+# Calculate the proportion
+prop_logit <- (treated_on_support_logit / total_treated) * 100
+
+# --- 2. For the RANDOM FOREST Model ---
+
+# Get the min/max p-score of the CONTROL group
+control_support_rf <- range(dta_complete$ps_random_forest[dta_complete$treat == 0], na.rm = TRUE)
+
+# Count how many TREATED units fall INSIDE that range
+treated_on_support_rf <- sum(
+  dta_complete$ps_random_forest[dta_complete$treat == 1] >= control_support_rf[1] &
+  dta_complete$ps_random_forest[dta_complete$treat == 1] <= control_support_rf[2],
+  na.rm = TRUE
+)
+
+# Calculate the proportion
+prop_rf <- (treated_on_support_rf / total_treated) * 100
+
+# --- 3. Print the findings ---
+cat(sprintf("Logit Model: %d out of %d treated units (%.1f%%) were on the common support.\n",
+            treated_on_support_logit, total_treated, prop_logit))
+            
+cat(sprintf("Random Forest Model: %d out of %d treated units (%.1f%%) were on the common support.\n",
+            treated_on_support_rf, total_treated, prop_rf))
 ```
 
-```{r q4-overlap-plot}
-# Plot propensity score distributions
+This calculation gives us the hard numbers behind our overlap problem, and it reveals an interesting wrinkle.
+For the logit model, our calculation shows that only 8 of our 15 treated units (53.3%) had a p-score that fell strictly within the common support region (0.000 to 0.194) defined by the controls.
+This is a critical finding. In Q2, our caliper matching, which is a "fuzzier" search, was able to find 9 matches. This calculation, which uses a "hard" rule, finds only 8. This suggests that the 9th match we found was likely a very poor one, sitting right on the edge of the common support and barely squeaking by the caliper.
+The story for the random forest is even more stark. Our calculation shows that only 5 of the 15 units (33.3%) were on the hard common support. This confirms our earlier findings that the RF model created worse overlap. The fact that our Q2 matching algorithm managed to find 8 matches suggests it had to pull in 3 units that were technically "off-support," leading to the severe imbalance we saw in the Q3 Love plots.
+This step proves that our "unmatched" units weren't just a random assortment; they were all the units that fell outside the common support.
 
+**Interpretation Q4.2**
 
-```
+The density plots we ran back in Q1 really drive home the findings from our min/max table.
+When you look at those plots, you see this massive, high-density blue spike piled up right at zero. That's our 139 control units, all stacked together. In comparison, our 15 treated units are just a low, flat red line that's almost invisible. The Y-axis has to stretch so much to fit that giant blue spike that it visually squashes the red distribution, which perfectly illustrates the extreme imbalance we're dealing with.
+The "region of poor overlap" is, to be specific, any p-score above 0.194. That's the absolute maximum score we found in the entire control group. Our min/max table showed that our treated units have p-scores going all the way up to 0.884. This means any treated unit with a score of 0.50, or even 0.25, is living in a "neighborhood" where there are literally zero control units. This makes finding a valid match for them impossible.
 
-```{r q4-trimming-optional}
-# Optional: Trim and re-estimate
+**Interpretation Q4.4**
 
-
-```
-
-**Discussion:**
-
-[Is there good overlap? Which observations are on the edge of common support?]
+The prompt asks for a "common sense" check to see if our matched pairs look "acceptable" or "fair." We could go through them one by one, but honestly, we've already got a much better, data-driven answer from our diagnostic checks in Q3.
+Our Love plots give us the definitive answer, which is: no, the matched subsets are not acceptable.
+Our main Covariate Balance (Base) plot, for instance, makes it crystal clear that even after matching, the 8-9 pairs we kept are still severely unbalanced. Key variables like t0, inter, and pop have SMDs way over the 0.1 line, and some—like t0 for the RF model—actually got worse after matching.
+This just proves these matches aren't "fair" counterfactuals; we're still comparing apples and oranges. So, our entire Q3 analysis, which already concluded that the matching failed to get us balance, is the definitive answer to this question.
 
 ---
 
