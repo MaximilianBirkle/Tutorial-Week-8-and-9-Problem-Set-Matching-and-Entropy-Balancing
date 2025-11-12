@@ -418,9 +418,17 @@ knitr::kable(results_df,
 
 **Discussion:**
 
-Matching on the logit of the propensity score with a 0.2 caliper leads to a loss of treated observations: out of 15 treated conflicts, only 9 (logit) or 8 (RF) find an acceptable match. The remaining ca. 45% of treated units lie outside the region of common support and are discarded to avoid bias.
+When we ran the matching procedure, we immediately ran into a major, real-world problem that confirms our earlier fears about poor overlap. We tried to find a "statistical twin" for each of our 15 UN-treated conflicts, using the standard 0.2 caliper on the logit of the p-score.
 
-As a result, the estimand changes. Instead of the ATT for all treated wars, we now estimate the ATT for the subset of treated conflicts whose observed characteristics overlap with those of the controls. This means our causal conclusion applies only to “matchable” conflicts. The matched ATT is therefore internally valid, but less externally generalizable.
+It turns out, this was only possible for about half of them. Using the logistic model's scores, we found acceptable matches for only 9 treated units. The random forest was even stricter, finding matches for only 8. This means that a huge chunk of our treated sample—roughly 45%—had to be discarded.
+
+These 6 or 7 units weren't dropped by accident. They were dropped because they were just too "extreme" and fell completely outside the region of common support. The caliper, which is designed to prevent us from making bad, biased comparisons, correctly identified that these units had no reasonable counterfactual in the control group. We are almost certainly losing the most severe, high-profile conflicts, the ones that were so obviously candidates for UN intervention that they looked nothing like the non-intervened cases.
+
+This has a crucial and unavoidable consequence for our research question. We've been forced to make a classic trade-off. We can no longer estimate the "Average Treatment Effect on the Treated" (ATT) for all conflicts the UN intervened in. That original goal is off the table because we had to discard half the data.
+
+Instead, our estimand has fundamentally changed. We're now estimating the ATT for a much narrower, non-random subset of conflicts—specifically, the 8 or 9 "matchable" conflicts whose characteristics were already 'close enough' to the control group to begin with.
+
+This is the central challenge of this kind of research. By discarding the 'unmatchable' conflicts, we've hopefully created an estimate that is internally valid for the remaining units. But we've paid a steep price in external validity, or generalizability. Our final causal conclusion, whatever it is, won't apply to all UN interventions. It will only apply to this small, specific group of conflicts that we were actually able to find a match for.
 
 ---
 
@@ -446,39 +454,9 @@ $$\text{SMD}_{\text{match}}(k) = \frac{\bar{X}^{k,\text{treated}}_{\text{match}}
 4. Comment on which design achieves better covariate balance
 5. Create two additional Love plots including interactions and squared terms
 
-```{r q3-smd-calculation}
-# Raw SMDs (before matching)
-bal_raw <- bal.tab(
-  treat ~ inter + deaths + couprev + sos + drugs + t0 +
-    ethfrac + pop + lmtnest + milper +
-    eeurop + lamerica + asia + ssafrica,
-  data = dta_new,
-  estimand = "ATT",
-  quick = FALSE
-)
-
-
-# SMDs after logit matching
-bal_logit <- bal.tab(m_logit, un = TRUE)
-
-# SMDs after RF matching
-bal_rf <- bal.tab(m_rf, un = TRUE)
-
-smd_df <- data.frame(Covariate = rownames(bal_raw$Balance),
-                     Raw = bal_raw$Balance$Diff.Un,
-                     Logit_Matched = bal_logit$Balance$Diff.Adj,
-                     RF_Matched = bal_rf$Balance$Diff.Adj)
-
-knitr::kable(smd_df, digits = 3,
-             caption = "Standardized Mean Differences Before and After Matching")
-```
-
-```{r q3-smd}
-
-# Create three SEPARATE balance objects
+```{r q3-smd, include=TRUE}
 
 # Object 1: Raw (Unmatched) Data
-# We must specify estimand = "ATT" to get the right SMD denominator
 bal_raw <- bal.tab(
   treat ~ inter + deaths + couprev + sos + drugs + t0 +
     ethfrac + pop + lmtnest + milper +
@@ -492,12 +470,12 @@ bal_logit <- bal.tab(m_logit)
 
 # Object 3: RF-Matched Data
 bal_rf <- bal.tab(m_rf)
+
 ```
 
+```{r q3-balance-table, results='asis'}
 
-```{r q3-love-plot-base}
-
-# Create the data frame
+# New dataframe by pulling from our objects
 smd_df <- data.frame(
   Covariate = rownames(bal_raw$Balance),
   Unadjusted = bal_raw$Balance$Diff.Un,
@@ -505,38 +483,80 @@ smd_df <- data.frame(
   RF_Matched = bal_rf$Balance$Diff.Adj
 )
 
-# Reshape data from wide to long format
-smd_long <- smd_df %>%
-  pivot_longer(
-    cols = -Covariate,
-    names_to = "Sample",
-    values_to = "SMD"    # New column for the SMD value
-  ) %>%
-  # We want to plot the absolute value
-  mutate(Absolute_SMD = abs(SMD))
+# Professional Table for visualization
+knitr::kable(smd_df,
+      format = "latex", 
+      booktabs = TRUE, 
+      digits = 3,
+      col.names = c("Covariate", "Unadjusted", "Logit Matched", "RF Matched"),
+      align = "lrrr",
+      caption = "Standardized Mean Differences Before and After Matching"
+) %>%
+  row_spec(nrow(smd_df)-1, hline_after = TRUE) %>% 
+  kable_styling(latex_options = "hold_position", position = "center")
+```
 
 
-# Order Covariates by Unadjusted SMD
-# We want the y-axis to be sorted from largest imbalance (top)
-# to smallest (bottom).
+```{r q3-love-plot-base}
 
-# Get the vector of covariate names in the desired order
+# Firstly, we have to define the base formula with the base covariates
+formula_base <- ~ inter + deaths + couprev + sos + drugs + t0 +
+                  ethfrac + pop + lmtnest + milper +
+                  eeurop + lamerica + asia + ssafrica
+
+# We create three balance objects
+bal_raw <- bal.tab(
+  formula_base, 
+  data = dta_complete, 
+  treat = dta_complete$treat,
+  estimand = "ATT"
+)
+
+bal_logit <- bal.tab(
+  formula_base,
+  data = dta_complete,
+  treat = dta_complete$treat,
+  weights = m_logit$weights, # Use direct weights
+  estimand = "ATT",
+  method = "weighting"
+)
+
+bal_rf <- bal.tab(
+  formula_base,
+  data = dta_complete,
+  treat = dta_complete$treat,
+  weights = m_rf$weights,
+  estimand = "ATT",
+  method = "weighting"
+)
+
+# SMD data frame
+smd_df <- data.frame(
+  Covariate = rownames(bal_raw$Balance),
+  Unadjusted = bal_raw$Balance$Diff.Un,
+  Logit_Matched = bal_logit$Balance$Diff.Adj,
+  RF_Matched = bal_rf$Balance$Diff.Adj
+)
+
+# Reshape and order
 covariate_order <- smd_df %>%
   mutate(Absolute_SMD = abs(Unadjusted)) %>%
-  arrange(Absolute_SMD) %>%
+  arrange(desc(Absolute_SMD)) %>%
   pull(Covariate)
 
-# Create the 'long' data frame for plotting
-smd_long_ordered <- smd_long %>%
-  mutate(Covariate = factor(Covariate, levels = covariate_order))
+smd_long_ordered <- smd_df %>%
+  pivot_longer(cols = -Covariate, names_to = "Sample", values_to = "SMD") %>%
+  mutate(
+    Absolute_SMD = abs(SMD),
+    Covariate = factor(Covariate, levels = covariate_order)
+  )
 
-
-# Create love plot with ggplot
+# Create the plot
 ggplot(smd_long_ordered, aes(x = Absolute_SMD, y = Covariate, color = Sample, shape = Sample)) +
   geom_point(size = 3, position = position_dodge(width = 0.6)) + 
   geom_vline(xintercept = 0.1, linetype = "dashed", color = "black") +
   labs(
-    title = "Covariate Balance Before and After Matching",
+    title = "Covariate Balance (Base)",
     x = "Absolute Standardized Mean Difference",
     y = "Covariate"
   ) +
@@ -551,23 +571,176 @@ ggplot(smd_long_ordered, aes(x = Absolute_SMD, y = Covariate, color = Sample, sh
   theme_bw() + 
   theme(legend.position = "bottom") + 
   coord_cartesian(xlim = c(0, NA))
+
 ```
 
 ```{r q3-love-plot-interactions}
 # Love plot: Including interactions
 
+# Firstly, we have to define the formula with the interaction terms
+formula_interactions <- ~ inter + deaths + couprev + sos + drugs + t0 +
+                            ethfrac + pop + lmtnest + milper +
+                            eeurop + lamerica + asia + ssafrica +
+                            inter*pop + inter*milper + pop*milper
+
+# Again, we create three balance objects
+bal_raw_int <- bal.tab(
+  formula_interactions, 
+  data = dta_complete, 
+  treat = dta_complete$treat,
+  estimand = "ATT"
+)
+
+bal_logit_int <- bal.tab(
+  formula_interactions,
+  data = dta_complete,
+  treat = dta_complete$treat,
+  weights = m_logit$weights,
+  estimand = "ATT",
+  method = "weighting"
+)
+
+bal_rf_int <- bal.tab(
+  formula_interactions,
+  data = dta_complete,
+  treat = dta_complete$treat,
+  weights = m_rf$weights,
+  estimand = "ATT",
+  method = "weighting"
+)
+
+# SMD data frame (with interactions)
+smd_df_int <- data.frame(
+  Covariate = rownames(bal_raw_int$Balance),
+  Unadjusted = bal_raw_int$Balance$Diff.Un,
+  Logit_Matched = bal_logit_int$Balance$Diff.Adj,
+  RF_Matched = bal_rf_int$Balance$Diff.Adj
+)
+
+# Bringing our data into shape and reorder it
+covariate_order_int <- smd_df_int %>%
+  mutate(Absolute_SMD = abs(Unadjusted)) %>%
+  arrange(desc(Absolute_SMD)) %>%
+  pull(Covariate)
+
+smd_long_int_ordered <- smd_df_int %>%
+  pivot_longer(cols = -Covariate, names_to = "Sample", values_to = "SMD") %>%
+  mutate(
+    Absolute_SMD = abs(SMD),
+    Covariate = factor(Covariate, levels = covariate_order_int)
+  )
+
+# Create plot with interactions
+ggplot(smd_long_int_ordered, aes(x = Absolute_SMD, y = Covariate, color = Sample, shape = Sample)) +
+  geom_point(size = 3, position = position_dodge(width = 0.6)) + 
+  geom_vline(xintercept = 0.1, linetype = "dashed", color = "black") +
+  labs(
+    title = "Covariate Balance (with Key Interaction Terms)",
+    x = "Absolute Standardized Mean Difference",
+    y = "Covariate"
+  ) +
+  scale_color_manual(
+    name = "Sample",
+    values = c("Unadjusted" = "grey30", "Logit_Matched" = "blue", "RF_Matched" = "red")
+  ) +
+  scale_shape_manual(
+    name = "Sample",
+    values = c("Unadjusted" = 15, "Logit_Matched" = 17, "RF_Matched" = 18)
+  ) +
+  theme_bw() + 
+  theme(legend.position = "bottom") + 
+  coord_cartesian(xlim = c(0, NA))
 
 ```
 
 ```{r q3-love-plot-squares}
 # Love plot: Including squared terms
 
+# Firstly, we have to define the formula with squared terms
+formula_squares <- ~ inter + deaths + couprev + sos + drugs + t0 +
+                     ethfrac + pop + lmtnest + milper +
+                     eeurop + lamerica + asia + ssafrica +
+                     I(deaths^2) + I(t0^2) + I(ethfrac^2) + 
+                     I(pop^2) + I(lmtnest^2) + I(milper^2)
+
+# We create three balance objects
+bal_raw_poly <- bal.tab(
+  formula_squares, 
+  data = dta_complete, 
+  treat = dta_complete$treat,
+  estimand = "ATT"
+)
+
+bal_logit_poly <- bal.tab(
+  formula_squares,
+  data = dta_complete,
+  treat = dta_complete$treat,
+  weights = m_logit$weights,
+  estimand = "ATT",
+  method = "weighting"
+)
+
+bal_rf_poly <- bal.tab(
+  formula_squares,
+  data = dta_complete,
+  treat = dta_complete$treat,
+  weights = m_rf$weights,
+  estimand = "ATT",
+  method = "weighting"
+)
+
+# SMD data frame (for squared terms)
+smd_df_poly <- data.frame(
+  Covariate = rownames(bal_raw_poly$Balance),
+  Unadjusted = bal_raw_poly$Balance$Diff.Un,
+  Logit_Matched = bal_logit_poly$Balance$Diff.Adj,
+  RF_Matched = bal_rf_poly$Balance$Diff.Adj
+)
+
+
+covariate_order_poly <- smd_df_poly %>%
+  mutate(Absolute_SMD = abs(Unadjusted)) %>%
+  arrange(desc(Absolute_SMD)) %>%
+  pull(Covariate)
+
+smd_long_poly_ordered <- smd_df_poly %>%
+  pivot_longer(cols = -Covariate, names_to = "Sample", values_to = "SMD") %>%
+  mutate(
+    Absolute_SMD = abs(SMD),
+    Covariate = factor(Covariate, levels = covariate_order_poly)
+  )
+
+# Create the plot (squared terms)
+ggplot(smd_long_poly_ordered, aes(x = Absolute_SMD, y = Covariate, color = Sample, shape = Sample)) +
+  geom_point(size = 3, position = position_dodge(width = 0.6)) + 
+  geom_vline(xintercept = 0.1, linetype = "dashed", color = "black") +
+  labs(
+    title = "Covariate Balance (with Key Squared Terms)",
+    x = "Absolute Standardized Mean Difference",
+    y = "Covariate"
+  ) +
+  scale_color_manual(
+    name = "Sample",
+    values = c("Unadjusted" = "grey30", "Logit_Matched" = "blue", "RF_Matched" = "red")
+  ) +
+  scale_shape_manual(
+    name = "Sample",
+    values = c("Unadjusted" = 15, "Logit_Matched" = 17, "RF_Matched" = 18)
+  ) +
+  theme_bw() + 
+  theme(legend.position = "bottom") + 
+  coord_cartesian(xlim = c(0, NA))
+
 
 ```
 
 **Interpretation:**
 
-[Which method achieves better balance? Are all SMDs below 0.1?]
+The "Covariate Balance (Base)" plot is our main report card, and it's not good. The unadjusted data (grey squares) clearly shows the mess we started with. Key variables like pop, milper, and lmtnest are way off the 0.1 mark, which is exactly the selection bias we're trying to fix. But after we ran our matching, both methods failed to solve the problem. The logistic model (blue triangles) still left variables like t0 and inter way out of balance. The random forest (red diamonds) was a total disaster—it actually worsened the imbalance for critical covariates like lmtnest and t0, pushing their SMDs to new highs of 0.6 or more.
+
+This failure just gets confirmed and amplified in the other two plots. The "Key Squared Terms" plot shows that, unsurprisingly, since we couldn't even balance pop and milper, we definitely didn't balance pop^2 or milper^2. And the "Key Interaction Terms" plot is the most conclusive. The unadjusted data had astronomical SMDs for some interactions (like inter_0 * milper at over 1.2), and both matching strategies were completely ineffective at fixing this. The "matched" groups still had SMDs floating around 1.0.
+
+In summary, these Q3 diagnostics aren't a success story—they're a critical finding that connects everything we've seen so far. It all goes back to Q1 (the terrible overlap) and Q2 (having to discard half our treated units). These plots are the final proof that the 8 or 9 "matched" units we kept still aren't a valid comparison group. We have to conclude that this matching strategy failed. Any causal estimate we'd get from this sample would be unreliable and biased.
 
 ---
 
