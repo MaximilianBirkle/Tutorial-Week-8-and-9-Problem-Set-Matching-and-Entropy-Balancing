@@ -26,7 +26,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
 
 # Load Packages
 
-```{r load-packages}
+```{r load-packages, include=FALSE}
 library(tidyverse)      
 library(haven)          
 library(MatchIt)        
@@ -43,7 +43,7 @@ library(patchwork)
 library(cobalt)
 library(Synth)
 ```
-
+\newpage
 
 # Part I: Propensity Scores, Matching, and Robust Post-Matching Inference
 
@@ -62,10 +62,6 @@ Each row represents a **conflict episode** observed before a potential UN interv
 ```{r load-data-part1}
 # Read the UN intervention dataset
 data_un <- read_dta("war_pre_snapshots.dta")
-
-# Display structure and summary
-#glimpse(data_un)
-#summary(data_un)
 ```
 
 ## Define Treatment and Covariates
@@ -175,7 +171,7 @@ The **propensity score** is defined as:
 
 $$e(X_i) = P(T_i = 1 \mid X_i)$$
 
-A **propensity score** is the probability that a unit with certain characteristics will be assigned to the treatment group. It ranges between 0 and 1. 
+A **propensity score** takes the necessary covariates and estimates the a maximum likelihood model of the conditional probability of treatment (with fitted values that are bounded between 0 and 1), and uses the predicted values from the estimation to collapse those covariates into a single scalar. 
 
 
 ### Tasks:
@@ -316,15 +312,17 @@ p_logit + p_rf
 ```
 
 **Interpretation:**
-The propensity score distributions reveal a severe lack of common support, which will be challenging for the matching analysis. The summary statistics clearly illustrate this imbalance: The control group (N = 1,211) is a highly homogenous population whose propensity scores are tightly clustered at the low end of the distribution. For the logistic model, their scores have a *mean of 0.010* and a *maximum value of only 0.194*. This indicates the model correctly identifies these units as having a very low probability of receiving a UN intervention. 
+Looking at the propensity scores, it's pretty clear we have a major problem with common support, which is going to make the matching analysis tough. 
 
-In sharp contrast, the treated group (N = 16) is extremely heterogeneous. Their propensity scores are widely dispersed across the full spectrum, ranging from 0.000 to 0.884. This shows that the treated units, as expected, had a much higher predicted probability of intervention. 
+Our control group, all 1,211 of them, are just piled up at the low end of the distribution. For the logistic model, their p-scores have a tiny mean of 0.010 and don't go any higher than 0.194. This makes sense — the model correctly sees that these conflicts had an almost zero chance of getting a UN intervention.
 
-The core problem lies in the disconnect between these two distributions. The common support - the region where both treated and control units exist - is effectively confined *to the narrow 0.000 - 0.194 range*. Consequently, any treated unit with a propensity score above 0.194 *has no comparable units available for matching*. 
+In sharp contrast, our 16 treated units are all over the map. Their p-scores are spread wide, from 0.000 all the way to 0.884. This shows that, as we'd expect, the model found them to be much more likely to get an intervention.
 
-The density plots visually confirm this. We observe a massive, high-density spike at zero for the control group, while the small treated group forms a low, flat distribution that is almost invisible by comparison. The plot's y-axis is scaled to fit the control group, which visually obscures the treated group, and perfectly illustrates the extreme imbalance. 
+The core problem is the total disconnect between these two groups. The "common support" — the region where we actually have both treated and control units — is stuck in that tiny window between 0.000 and 0.194. This means any treated unit with a p-score higher than 0.194 has literally no comparable units to match with.
 
-This lack of overlap will probably have direct implications for Q2. When we apply the matching alogrithm with a 0.2 caliper, we must anticipate that a large portion of our 16 treated units will fail to find a match and will be discarded. This finding illustrates that the conflicts the UN intervened in are, based on the covariates in the dataset, fundamentally different from those it did not. 
+The density plots show this perfectly. We see this massive, high-density blue spike at zero (the controls), while our small treated group is just a low, flat red line that's almost invisible. The plot's Y-axis has to stretch to fit the control group, which just visually hides the treated group and highlights how extreme this imbalance is.
+
+This lack of overlap is definitely going to have direct implications for Q2. When we apply the matching algorithm, we have to expect that a large portion of our 16 treated units will fail to find a match and just get discarded. This isn't an error; it's a key finding that the conflicts the UN intervened in are, based on this data, just a fundamentally different beast from the ones it did not. 
 
 
 ---
@@ -351,9 +349,7 @@ Use **replacement** and a **caliper** of $0.2 \times \text{SD}(\ell_i)$ to restr
 dta_new$logit_ps_logit <- log(dta_new$ps_logistic_probs / (1 - dta_new$ps_logistic_probs))
 dta_new$logit_ps_rf    <- log(dta_new$ps_random_forest / (1 - dta_new$ps_random_forest))
 
-
-# Our RF model likely has p-scores of 0 or 1. log(0) = -Inf. log(1/0) = Inf.
-# We must remove these, as they are unmatchable.
+# We must remove p-scores of our RF model that 0 or 1, since they are unmatchable.
 dta_new$logit_ps_logit[!is.finite(dta_new$logit_ps_logit)] <- NA
 dta_new$logit_ps_rf[!is.finite(dta_new$logit_ps_rf)]       <- NA
 
@@ -387,16 +383,38 @@ m_rf <- matchit(
 
 ```
 
-```{r q2-matching_summary}
+```{r q2-matching_summary, include=FALSE}
 
 # Summary for Logit Match
 summary(m_logit)
 
 # Summary for Random Forest Match
 summary(m_rf)
-
-
 ```
+
+```{r q2-matching_table, results='asis'}
+
+# Numbers from summary() - output
+results_df <- data.frame(
+  Status = c("All", "Matched", "Unmatched"),
+  Logit_Control = c(139, 8, 131),
+  Logit_Treated = c(15, 9, 6),
+  RF_Control = c(139, 6, 133),
+  RF_Treated = c(15, 8, 7)
+)
+
+# Professional Table for visualization
+knitr::kable(results_df,
+      format = "latex", 
+      booktabs = TRUE, 
+      col.names = c("Sample", "Control", "Treated", "Control", "Treated"),
+      align = "lcccc",
+      caption = "Sample Sizes Before and After 1:1 Matching"
+) %>%
+  add_header_above(c(" " = 1, "Logistic Regression" = 2, "Random Forest" = 2)) %>%
+  kable_styling(latex_options = "hold_position", position = "center")
+```
+
 
 **Discussion:**
 
