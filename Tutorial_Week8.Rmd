@@ -844,17 +844,58 @@ where $\mathcal{T}^*$ is the set of treated units with a valid match.
 Compute the ATT for both matching methods.
 
 ```{r q5-att-calculation}
-# ATT using logit matching
+
+# ATT using LOGIT matching
+
+# Get the matrix of matched pairs from the matchit object
+match_matrix_logit <- m_logit$match.matrix
+
+# Get the outcomes for the matched TREATED units (Yi)
+y_i_logit <- dta_complete[rownames(match_matrix_logit), "outcome"]
+
+# Get the outcomes for the matched CONTROL units (Yj(i))
+y_j_logit <- dta_complete[match_matrix_logit[, 1], "outcome"]
+
+# Calculate the difference for each pair
+diffs_logit <- y_i_logit - y_j_logit
+
+# Compute the ATT (the mean of the differences for valid pairs)
+att_logit <- mean(diffs_logit, na.rm = TRUE)
+
+cat("ATT (Logit Matched):", att_logit, "\n")
 
 
 # ATT using RF matching
+
+# Get the matrix of matched pairs
+match_matrix_rf <- m_rf$match.matrix
+
+# Get outcomes for TREATED units (Yi)
+y_i_rf <- dta_complete[rownames(match_matrix_rf), "outcome"]
+
+# Get outcomes for CONTROL units (Yj(i))
+y_j_rf <- dta_complete[match_matrix_rf[, 1], "outcome"]
+
+# Calculate the difference for each pair
+diffs_rf <- y_i_rf - y_j_rf
+
+# Compute the ATT (the mean of the differences for valid pairs)
+att_rf <- mean(diffs_rf, na.rm = TRUE)
+
+cat("ATT (RF Matched):", att_rf, "\n")
 
 
 ```
 
 **Interpretation:**
 
-[What is the estimated effect of UN intervention on conflict duration?]
+The logit model, with its 9 matched pairs, spit out an ATT of -6.22. On the surface, this looks like it suggests the UN decreases conflict duration by about 6.2 (days/months, whatever the unit is).
+But then, in sharp contrast, the random forest's 8 pairs gave us an ATT of +38.5, suggesting the UN prolongs conflict.
+This is a classic "what-is-going-on" moment, but we have to be extremely clear: neither of these numbers is a credible causal estimate.
+This isn't just a minor technicality. Our diagnostic analysis in Q3 was a definitive finding that our matching procedure failed. Those Love plots (like image_81f4dc.png) showed conclusively that our "matched" samples are still severely imbalanced on key, powerful confounders like the start year (t0) and whether the conflict was internationalized (inter).
+Because our matched sample isn't balanced, the original selection bias we were trying to fix is still baked into the cake. This means these ATT estimates are hopelessly contaminated by that same bias.
+The fact that the two methods give wildly different results—one negative, one positive—is basically the final nail in the coffin. It just confirms that our estimates are just noise, driven by the remaining imbalance.
+Therefore, we can't interpret -6.22 or 38.5 as "the causal effect." We have to conclude that this entire matching strategy failed to produce a valid estimate. Calculating a simple mean-difference on this still-biased sample is just as uninterpretable as the raw, unadjusted comparison we started with.
 
 ---
 
