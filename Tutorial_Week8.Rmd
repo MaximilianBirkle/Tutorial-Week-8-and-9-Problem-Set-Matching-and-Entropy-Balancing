@@ -939,31 +939,134 @@ This brings us to our specific (and terrible) dataset. We have extremely weak ov
 
 ```{r q5-5-matching-ratios}
 # 1:1 matching
-
+m1 <- matchit(treat ~ 1,
+              data        = dta_complete,
+              distance    = dta_complete$logit_ps_logit,
+              method      = "nearest",
+              replace     = TRUE,
+              ratio       = 1,
+              caliper     = 0.2,
+              std.caliper = TRUE)
 
 # 2:1 matching
-
+m2 <- matchit(treat ~ 1,
+              data        = dta_complete,
+              distance    = dta_complete$logit_ps_logit,
+              method      = "nearest",
+              replace     = TRUE,
+              ratio       = 2,
+              caliper     = 0.2,
+              std.caliper = TRUE)
 
 # 3:1 matching
+m3 <- matchit(treat ~ 1,
+              data        = dta_complete,
+              distance    = dta_complete$logit_ps_logit,
+              method      = "nearest",
+              replace     = TRUE,
+              ratio       = 3,
+              caliper     = 0.2,
+              std.caliper = TRUE)
+```
 
+```{r q5-5-stats}
+get_match_stats <- function(m_obj, ratio_m) {
+  # Extract match matrix (rows = treated, cols = matched controls)
+  mm <- m_obj$match.matrix
+  
+  # Number of treated units successfully matched = number of rows
+  n_pairs <- nrow(mm)
+  
+  # Compute mean absolute distance in logit(PS) between each treated
+  # and its matched controls
+  dist_vec <- c()
+  for (i in seq_len(nrow(mm))) {
+    treated_id  <- rownames(mm)[i]
+    control_ids <- mm[i, ]
+    control_ids <- control_ids[!is.na(control_ids)]
+    
+    treat_logit   <- dta_complete[treated_id, "logit_ps_logit"]
+    control_logit <- dta_complete[control_ids, "logit_ps_logit"]
+    
+    dist_vec <- c(dist_vec, abs(control_logit - treat_logit))
+  }
+  mean_dist <- mean(dist_vec, na.rm = TRUE)
+  
+  # Build matched dataset with weights + subclass IDs
+  md <- match.data(m_obj, data = dta_complete)
+  
+  # Weighted regression for ATT
+  fit <- lm(outcome ~ treat, data = md, weights = weights)
+  
+  # Cluster-robust VCOV clustered on subclass (matched set)
+  vc  <- sandwich::vcovCL(fit, cluster = md$subclass)
+  att <- coef(fit)["treat"]
+  se  <- sqrt(diag(vc))["treat"]
+  
+  data.frame(m = ratio_m,
+             N_matched_pairs  = n_pairs,
+             mean_match_dist  = mean_dist,
+             ATT  = att,
+             Std_Error = se)}
 
+# Apply helper to the three designs
+results_ratios <- bind_rows(get_match_stats(m1, 1),
+                            get_match_stats(m2, 2),
+                            get_match_stats(m3, 3))
+
+results_ratios
 ```
 
 ```{r q5-5-results-table}
-# Create comparison table
+results_ratios_table <- results_ratios %>%
+  dplyr::mutate(
+    `Matching Ratio (1:m)` = paste0("1:", m),
+    `Mean Match Distance`  = round(mean_match_dist, 3),
+    `ATT Estimate`         = round(ATT, 3),
+    `Std. Error`           = round(Std_Error, 3),
+    `N (Matched Pairs)`    = N_matched_pairs
+  ) %>%
+  dplyr::select(
+    `Matching Ratio (1:m)`,
+    `Mean Match Distance`,
+    `ATT Estimate`,
+    `Std. Error`,
+    `N (Matched Pairs)`)
+
+# Let kable pick the right format for the current output (latex vs markdown)
+tbl <- knitr::kable(results_ratios_table,
+                    caption = "ATT Estimates by Matching Ratio (Logit PS, Caliper 0.2, With Replacement)",
+                    booktabs = knitr::is_latex_output())  # only relevant for LaTeX/PDF
 
 
+# Only apply kableExtra styling when knitting to LaTeX or HTML (not github_document)
+if (knitr::is_latex_output() || knitr::is_html_output()) {
+  tbl <- tbl %>%
+    kableExtra::kable_styling(latex_options = "hold_position",
+                              position      = "center")}
+
+tbl
 ```
 
 ```{r q5-5-plot-ratios}
 # Plot ATT by matching ratio with error bars
-
+ggplot(results_ratios, aes(x = m, y = ATT)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = ATT - 1.96 * Std_Error,
+                    ymax = ATT + 1.96 * Std_Error),
+                    width = 0.1) +
+  scale_x_continuous(breaks = c(1, 2, 3),
+                     labels = c("1:1", "1:2", "1:3")) +
+  labs(title = "ATT by Matching Ratio (1:m)",
+       x     = "Matching Ratio m (1:m)",
+       y     = "ATT (UN Intervention Effect on Conflict Duration)") +
+  theme_bw()
 
 ```
 
 **Interpretation:**
 
-[Do results display expected bias-variance pattern?]
+The pattern shows up in the Plot here. The standard errors get smaller from 1:1 over 2:1 to 3:1, meaning the estimates are theoretically getting better (variance decreases). However bias must be also increasing, because our ATT shifts from negative (1:1) over "slightly less negative" (2:1) to becoming positive (3:1). Our matching in this Data Set is not really powerful, as we established, meaning the second or third nearest member might be "very far away", increasing bias heavily.
 
 ---
 
@@ -977,8 +1080,7 @@ This brings us to our specific (and terrible) dataset. We have extremely weak ov
 
 **Discussion:**
 
-[Your analysis here]
-
+Honestly, i do not think any of these designs produce useful causal estimates, but if one had to choose its probably the 1:1 option. It does have the most variance but the fact that we have very far distances and much bias when adding extra control, so were pulling in worse matches with 2:1 and 3:1. The results relate to Abadie & Imbens (2006) in the sense that we definitely see the variance-bias trade off pattern. Also, we only have a N of 154 observations and they state that bias gets smaller with larger numbers in N, so the low number of 154 could explain the terrible results. Therefore, with infinite data and perfect overlap, Bias would go to zero for all matching rations (X:1) and also the variance would continue to get smaller with rising ratios.
 ---
 
 ## Q6. Robust Post-Matching Inference (Abadie & Spiess, 2021)
@@ -1004,25 +1106,62 @@ $$\widehat{V}_{\text{CR}}(\hat{\tau}) = (X'X)^{-1} \left( \sum_{s} X_s' \hat{\va
 
 ```{r q6-robust-inference-logit}
 # Regression on logit-matched data with cluster-robust SE
+md_logit <- match.data(m_logit, data = dta_complete)
 
+# Fit ATT regression using matching weights
+fit_logit <- lm(outcome ~ treat, data = md_logit, weights = weights)
+
+# Compute cluster-robust VCOV (clustered by matched-set "subclass")
+vcov_logit <- vcovCL(fit_logit,
+              cluster = md_logit$subclass,
+              type = "HC3")     # recommended in the question
+  
+
+# Extract ATT and its SE
+tau_logit <- coef(fit_logit)["treat"]
+se_logit  <- sqrt(diag(vcov_logit))["treat"]
+
+tau_logit
+se_logit
 
 ```
 
 ```{r q6-robust-inference-rf}
 # Regression on RF-matched data with cluster-robust SE
+md_rf <- match.data(m_rf, data = dta_complete)
 
+# Fit ATT regression
+fit_rf <- lm(outcome ~ treat, data = md_rf, weights = weights)
+
+# Cluster-robust SEs (cluster by matched sets)
+vcov_rf <- vcovCL(fit_rf,
+           cluster = md_rf$subclass,
+           type = "HC3")
+
+# Extract ATT and SE
+tau_rf <- coef(fit_rf)["treat"]
+se_rf  <- sqrt(diag(vcov_rf))["treat"]
+
+tau_rf
+se_rf
 
 ```
 
 ```{r q6-comparison-table}
 # Compare results
+q6_results <- data.frame(Method = c("Logit-matched", "RF-matched"),
+                         ATT_Estimate = c(tau_logit, tau_rf),
+                         Std_Error = c(se_logit, se_rf))
 
+knitr::kable(q6_results,
+             digits = 3,
+             caption = "Q6: Cluster-Robust Inference for Logit and RF Matching (HC3)")
 
 ```
 
 **Interpretation:**
 
-[Compare point estimates and standard errors across methods]
+The the two methods still produce the same very different point estimates, which comes down to poor overlap, as explained in Q5. The standard errors are both very large, RF = 21.97 and Logit = 29.45. The value is a little lower for RF, probably because they have  1 more matched control per treated unit. Overall, these huge standard errors reflect the earlier results that neither matched sample provides any reliable estimates of a causal effect. 
 
 ---
 
@@ -1061,7 +1200,18 @@ $$\widehat{V}_{\text{CR}}(\hat{\tau}) = (X'X)^{-1} \left( \sum_{s} X_s' \hat{\va
 
 **Discussion:**
 
-[Your reflection here]
+**1:**
+
+According to Rosenbaum & Rubin (1983) the propensity score is a balancing score because: $T_i \perp X_i \mid e(X_i)$. So within the "respective propensity score" the distribution of covariates is the same for treated and control units. So we "collapse" all relevant covariate information into one probability (scalar). So, like stated earlier, if treatment is independent of potential outcomes given covariates, then propensity score is enough to balance on. Once we match the units on propensity scores, they should look similar on all covariates. 
+
+**2:**
+
+The logistic regression is "smoother", interactions or nonlinarities have to be explicitly added. This theoretically gives less extreme predicted probabilities (which makes matching easier) but also tends to underfit relationships when they are somewhat complicated. A Random Forest estimation is more "flexible", meaning it can approximate complex nonlinearities automatically. However this might lead to overfitting simple relationships. 
+
+**3:**
+
+For the ATT we estimate: $\mathbb{E}[Y(0) \mid T = 1]$. It is required that control units look like treated units in terms of X, all others fall under overlap violations and will not be matched. So all treated units that fall outside the support of the controls have no comparable control units and the ATT becomes unidentifiable for that unit. When overlap is weak, like here, we have an unstable ATT, high bias, large standard errors and high sensitivity to matching design. Thus overlap is the basic requirement that ensures we construct a meaningful comparison group. 
+
 \newpage
 
 # Part II: Synthetic Control - German Reunification Study
