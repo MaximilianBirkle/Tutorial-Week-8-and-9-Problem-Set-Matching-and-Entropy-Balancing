@@ -1062,7 +1062,6 @@ $$\widehat{V}_{\text{CR}}(\hat{\tau}) = (X'X)^{-1} \left( \sum_{s} X_s' \hat{\va
 **Discussion:**
 
 [Your reflection here]
-
 \newpage
 
 # Part II: Synthetic Control - German Reunification Study
@@ -1095,23 +1094,23 @@ repgermany <- x
 2. Why is it particularly suitable for the West Germany case?
 3. What is the key identification assumption?
 
-**Discussion:**
+### Discussion:
 
-**1.)**
+**1. Intuition Behind the Synthetic Control Method**
 
-The synthetic control method serves as a way to bridge between quantitative and qualitative methods in social science research, helping to make precise quantitative inference in small-sample studies. Usually, small sample comparative case studies uncover evidence at a level of high granularity that is impossible to establish in large-scale quantitative studies, which in turn provide precise numerical results that can be compared across studies. For these reasons growing interest emerged to find a way to combine both approaches.
+The synthetic control method serves as a way to bridge quantitative and qualitative methods in social science research, helping to make precise quantitative inference in small-sample studies. Usually, small-sample comparative case studies uncover evidence at a level of high granularity that is impossible to establish in large-scale quantitative studies, which in turn provide precise numerical results that can be compared across studies. For these reasons, growing interest emerged to find a way to combine both approaches.
 
-The goal of most study designs is to compare outcomes between treated units, that are the main objects of study, and similar but untreated control units. The comparison units are intended to reproduce the counterfactual of the treated units in the absence of the treatment. Making causal claims in in small sample comparative studies, is usually not hard due to the small sample size itself, but due to the missing mechanism of how to find suitable comparison units for the small pool of units available.
+The goal of most study designs is to compare outcomes between treated units, which are the main objects of study, and similar but untreated control units. The comparison units are intended to reproduce the counterfactual of the treated units in the absence of the treatment. Making causal claims in small-sample comparative studies is usually not hard due to the small sample size itself, but due to the missing mechanism of how to find suitable comparison units for the small pool of units available.
 
-Especially in comparative political science, the focus often lies on aggregate entities, such as states, countries or regions, for which obvious single comparisons often do not exist. In that case there is often one aggregate unit receiving treatment, where we try to select a set of similar untreated units from all of the untreated cases (here the "donor pool") to approximate the counterfactual. Standard designs based on selection on observables try to remove bias by controlling for measurable covariates. This approach fails when unobserved factors confound the result. This is particularly prevalent in comparative political research, as we study large entities as treatment units and control units, being made up of many individuals.
+Especially in comparative political science, the focus often lies on aggregate entities, such as states, countries, or regions, for which obvious single comparisons often do not exist. In that case, there is often one aggregate unit receiving treatment, where we try to select a set of similar untreated units from all of the untreated cases (here the "donor pool") to approximate the counterfactual. Standard designs based on selection on observables try to remove bias by controlling for measurable covariates. This approach fails when unobserved factors confound the result. This is particularly prevalent in comparative political research, as we study large entities as treatment units and control units, which are made up of many individuals.
 
 However, the synthetic control method is based on the premise that when the units of analysis are a few aggregate entities, a combination of comparison units (the synthetic control) often does a better job of reproducing the characteristics of the unit or units representing the case of interest than any single comparison unit alone. The comparison unit in the synthetic control method is selected as the weighted average of all potential comparison units. This weighted average is optimized to best reproduce the treated unit's pre-treatment outcome path and other key predictors. The optimally-weighted average is what serves as the counterfactual, which is custom-built to be the treated unit's 'doppelgänger' before treatment occurred. The core intuition is that by replicating the pre-treatment trend, the synthetic control also replicates the unobserved factors that drove that trend, thus creating a valid counterfactual.
 
-**2.)**
+**2. Suitability for West Germany**
 
 The case of West Germany is particularly suitable because it is not feasible to find a single country that could serve as a good counterfactual comparison on its own. In the underlying paper for this assignment, the authors demonstrated that no single country from the donor pool (16 OECD countries) could closely approximate the values of pre-reunification economic growth predictors for West Germany. This lack of a good single match perfectly aligns with the synthetic control method's motivation, namely to construct a composite counterfactual from a weighted average of the donor pool. This weighted average provided a very close approximation to West Germany's economic attributes and pre-treatment outcome path prior to 1990.
 
-**3.)**
+**3. Key Identification Assumption**
 
 The key identification assumption of the synthetic control method is rooted in the belief that similar pre-treatment trajectories imply similar causal structures. The authors assume that if the unit representing the case of interest and the synthetic control exhibit similar outcomes over an extended period of time prior to the intervention, then any discrepancy in the outcome variable following the intervention is interpreted as a product of the intervention itself. The ultimate goal is to accurately reproduce the unobserved counterfactual outcome path that the treated unit (West Germany) would have experienced in the absence of the treatment (reunification). Therefore, the method aims to find a weighted average of multiple control units that collectively replicates the entire pre-treatment trajectory of the outcome variable ($Y$ over $t$), in addition to matching on key predictor variables ($X$).
 
@@ -1135,27 +1134,27 @@ $$w_j \ge 0, \quad \sum_j w_j = 1$$
 2. What role do $v$-weights play in predictor balancing?
 3. Why is the convex-combination constraint important? What if weights could be negative or sum $\neq$ 1?
 
-**Mathematical Discussion:**
+### Mathematical Discussion:
 
-The optimization problem in synthetic control is the problem to find the ideal set of weights $w$ to build the most similar looking control group to the treatment group pre-treatment. To answer the above questions in more detail, we first have to define the meaning of the underlying terminology. The core function is a minimization of a sum of squared differences (a form of Mean Squared Error) over the pre-intervention period ($t≤T_0$) between the between the treated unit's actual outcome ($Y_{1t}$) and the synthetic control's outcome ($∑w_j Y_{jt}$).
+The optimization problem in synthetic control is the problem of finding the ideal set of weights $w$ to build the most similar-looking control group to the treatment group pre-treatment. To answer the above questions in more detail, we first have to define the meaning of the underlying terminology. The core function is a minimization of a sum of squared differences (a form of Mean Squared Error) over the pre-intervention period ($t≤T_0$) between the treated unit's actual outcome ($Y_{1t}$) and the synthetic control's outcome ($∑w_j Y_{jt}$).
 
 **The Synthetic Control**
 
-The Synthetic control term is what makes the whole Summation look more complicated, although it is relatively straightforward. First of all, there is a sample of $J+1$ units of analysis (e.g. countries), where $j=1$ is the case of interest ("treated unit"), and the units ($j=2$ to $j=J$) define the "Donor pool" of potential comparison units. The goal of the Synthetic control is to find a weighted average of the donor pool, that is a $(J \times 1)$ vector of weights $W= (w_2, ..., w_{J+1}),$ with $0 \leq w_j \leq 1$ for $(j=2, ..., J)$ and $(w_2+...+w_{J+1}=1)$, that the characteristics of the treated unit is best resembled by the synthetic control. 
-Let $X_1$ be a $(k\times 1)$ vector of preintervention characteristics for the treated unit and $X_0$ be a $(k\times J)$ matrix of the same variables for the donor pool ($j=2$ to $j=J$). The optimization problem is defined as to find a $W^*$ that minimizes $\|X_1-X_0W\|$, the difference between the treated unit's characteristics and the synthetic control. 
+The synthetic control term is what makes the whole summation look more complicated, although it is relatively straightforward. First of all, there is a sample of $J+1$ units of analysis (e.g., countries), where $j=1$ is the case of interest ("treated unit"), and the units ($j=2$ to $j=J+1$) define the "donor pool" of potential comparison units. The goal of the synthetic control is to find a weighted average of the donor pool, that is, a $(J \times 1)$ vector of weights $W= (w_2, ..., w_{J+1})$, with $0 \leq w_j \leq 1$ for $(j=2, ..., J+1)$ and $(w_2+...+w_{J+1}=1)$, such that the characteristics of the treated unit are best resembled by the synthetic control. 
+
+Let $X_1$ be a $(k\times 1)$ vector of pre-intervention characteristics for the treated unit and $X_0$ be a $(k\times J)$ matrix of the same variables for the donor pool ($j=2$ to $j=J+1$). The optimization problem is defined as finding a $W^*$ that minimizes $\|X_1-X_0W\|$, the difference between the treated unit's characteristics and the synthetic control.
 
 **Operationalization**
 
-Given $m=1, ...,k$, $X_{1m}$ is the value of the $m$-th variable for the treated unit and $X_{0m}:$ is a $(1 \times J)$ vector containing the values of the $m$-th variable for the units in the donor pool. $W^*$ is chosen to minimize:
+Given $m=1, ...,k$, $X_{1m}$ is the value of the $m$-th variable for the treated unit and $X_{0m}$ is a $(1 \times J)$ vector containing the values of the $m$-th variable for the units in the donor pool. $W^*$ is chosen to minimize:
 
-$\sum_{m=1}^{k}v_m(X_{1m}-X_{0m}W)^2$
+$$\sum_{m=1}^{k}v_m(X_{1m}-X_{0m}W)^2$$
 
-This expression calculates the weighted sum of squared differences between the treated unit's pre-intervention characteristics $(X_{1m})$ and the synthetic control's characteristics $(∑w_j X_{jm})$, where W contains the weights $w_j$. The goal is to find the set of weights $(W)$ that makes the synthetic control's characteristics match the treated unit's characteristics as closely as possible, using the non-negative weights $v_m$ to prioritize certain covariates $(X_m)$.
+This expression calculates the weighted sum of squared differences between the treated unit's pre-intervention characteristics $(X_{1m})$ and the synthetic control's characteristics $(∑w_j X_{jm})$, where $W$ contains the weights $w_j$. The goal is to find the set of weights $(W)$ that makes the synthetic control's characteristics match the treated unit's characteristics as closely as possible, using the non-negative weights $v_m$ to prioritize certain covariates $(X_m)$.
 
-$v_m$ is a wight that reflects the relative importance assigned to each of the predictor variables, when the difference between $X_1 \text{ and } X_0W$ is measured. It is crucial that the synthetic control closely reproduces the values that variables with a large predictive power on the outcome of interest take for the unit affected by the intervention. Therefore, variables with high predictive power, logically receive high $v$-weights.
+$v_m$ is a weight that reflects the relative importance assigned to each of the predictor variables when the difference between $X_1 \text{ and } X_0W$ is measured. It is crucial that the synthetic control closely reproduces the values that variables with large predictive power on the outcome of interest take for the unit affected by the intervention. Therefore, variables with high predictive power logically receive high $v$-weights.
 
-The $v$-weights therefore scale the influence of a potential mismatch between the pre-treatment case of interest and the synthetic control. The unit weights $w_j$ however, determine the contribution of each single unit $(j=2 \text{ to } j=J)$ in our data (or donor pool), to the overall value of that value in the synthetic control condition. Therefore, the $v$-weights, scale the relative importance of the $w_j$ weights for a variable $m$. Selecting a high value for $v$, also leads to a stronger influence of an individual units ($j$) difference between treatment and synthetic control. Where variables are assumed to receive a higher weight, values of $w_j$ should also be chosen more carefully. Selecting low values for $v$, leads to lower influence of difference in pre-treatment characteristics of the treated and the synthetic control.
-
+The $v$-weights therefore scale the influence of a potential mismatch between the pre-treatment case of interest and the synthetic control. The unit weights $w_j$, however, determine the contribution of each single unit $(j=2 \text{ to } j=J+1)$ in our data (or donor pool) to the overall value in the synthetic control condition. Therefore, the $v$-weights scale the relative importance of the $w_j$ weights for a variable $m$. Selecting a high value for $v$ also leads to a stronger influence of an individual unit's ($j$) difference between treatment and synthetic control. Where variables are assumed to receive a higher weight, values of $w_j$ should also be chosen more carefully. Selecting low values for $v$ leads to lower influence of differences in pre-treatment characteristics of the treated and the synthetic control.
 
 **The Synthetic Control Estimator**
 
@@ -1163,15 +1162,15 @@ Let $Y_{it}$ denote the outcome of unit $j$ at time $t$, $Y_1$ be a $(T_1 \times
 
 $$Y_{1t}- \sum_{j=2}^{J+1} w_j^* Y_{jt}$$
 
-Recalling the premise and the motivation of the synthetic control method, the goal is to construct a combination of comparison units to reproduce the characteristics of the unit or units representing the case of interest. By definition, the comparison units are constructed by taking the weighted average of all potential comparison units that best resemble the characteristics of the case of interest. 
+Recalling the premise and the motivation of the synthetic control method, the goal is to construct a combination of comparison units to reproduce the characteristics of the unit or units representing the case of interest. By definition, the comparison units are constructed by taking the weighted average of all potential comparison units that best resemble the characteristics of the case of interest.
 
-Therefore we can answer the question of what would happen if the weights "could" be negative or sum up to different than one, using just some basic statistics definitions. A mathematical average (or mean) is the sum of all numbers in a set divided by the count of how many numbers are in that set. A weighted average is the sum of a set of numbers where each number has first been multiplied by its own "importance" or "weight" (as explained in the paper). When the weights are negative or greater than one, it is no longer a weighted average, but extrapolation, where a weight greater than one helps to project beyond, and a negative weight means to subtract that unit's contribution, creating a value that has a negative effect. 
+Therefore, we can answer the question of what would happen if the weights "could" be negative or sum to something different than one, using just some basic statistics definitions. A mathematical average (or mean) is the sum of all numbers in a set divided by the count of how many numbers are in that set. A weighted average is the sum of a set of numbers where each number has first been multiplied by its own "importance" or "weight" (as explained in the paper). When the weights are negative or greater than one, it is no longer a weighted average but extrapolation, where a weight greater than one helps to project beyond, and a negative weight means to subtract that unit's contribution, creating a value that has a negative effect.
 
-According to the authors, this is exactly what we see in regression-based approaches. Although they use synthetic comparison units having coefficients that sum up to one as well, the regression approach **does not** restrict the coefficients of the linear combination that define the comparison unit to be between zero and one. If we now assume that our individual weights $(w_j)$ in the synthetic control term could also have values beyond $[0, 1]$, this would mean that we would just have a simple linear regression model, whose weights extrapolate to produce a perfect fit, in order to minimize the error. The findings of the paper show, however, that extrapolation is not necessary in the context of this study, since there exists a synthetic control that closely fits the values of the characteristics of the units and that does not extrapolate outside of the support of the data.
+According to the authors, this is exactly what we see in regression-based approaches. Although they use synthetic comparison units having coefficients that sum to one as well, the regression approach **does not** restrict the coefficients of the linear combination that define the comparison unit to be between zero and one. If we now assume that our individual weights $(w_j)$ in the synthetic control term could also have values beyond $[0, 1]$, this would mean that we would just have a simple linear regression model whose weights extrapolate to produce a perfect fit in order to minimize the error. The findings of the paper show, however, that extrapolation is not necessary in the context of this study, since there exists a synthetic control that closely fits the values of the characteristics of the units and that does not extrapolate outside the support of the data.
 
 ---
 
-## (c) Estimation, Balance Before & After
+## (c) Estimation, Balance, and Model Fit
 
 ### Tasks:
 
@@ -1188,7 +1187,7 @@ west_germany_id <- repgermany %>%
   pull(index) %>% 
   unique()
 
-# Synthetic control estimation (silently)
+# Synthetic control estimation
 invisible(capture.output({
   dataprep_out <- dataprep(
     foo = as.data.frame(repgermany),
@@ -1221,10 +1220,10 @@ balance_table <- synth.tab(
   synth.res = synth_out
 )
 
-# Create a formatted balance table
+# Balance table
 balance_df <- data.frame(
   Predictor = c("GDP per capita", "Trade openness", "Inflation rate", 
-                "Industry share", "Schooling", "Investment rate"),
+                "Industry share", "Investment rate", "Schooling"),
   West_Germany = balance_table$tab.pred[, 1],
   Synthetic = balance_table$tab.pred[, 2],
   OECD = balance_table$tab.pred[, 3]
@@ -1281,17 +1280,21 @@ ggplot(weights_plot_df, aes(x = reorder(Country, Weight), y = Weight)) +
   theme_minimal()
 ```
 
-**Interpretation:**
+### Interpretation:
 
-The weights ($w_j$) determined by the Synthetic Control Method tell us the contribution of each non-treated country (donor) used to construct the counterfactual.The findings from Table 6 and the corresponding figure show that the Synthetic West Germany is a weighted average heavily dominated by some countries, with the majority of the donor pool contributing very little to the final counterfactual.
-Austria is by far the largest contributor with a weight of 0.389 , followed by Switzerland (0.185) and the USA (0.166). These three countries account for nearly three-quarters of the synthetic unit's composition, meaning they were deemed the most relevant countries whose pre-reunification economic paths, best matched West Germany's pre-reunification path and economic predictors. The remaining countries, such as Portugal, Spain, and Greece, received weights close to zero, indicating they were not required to accurately replicate West Germany's characteristics.
-The countries that contribute more to the synthetic control do so because their pre-intervention economic characteristics and outcomes (such as GDP, trade openness, and investment rate) most closely matched those of West Germany during the pre-treatment period, making them the best statistical "building blocks" for the counterfactual. Austria, in particular, likely received the highest weight due to its geographic and cultural proximity, which implies a strong historical and structural similarity that affects economic trends. The inclusion of countries like Switzerland (a highly specialized, high-GDP, non-EU economy) and the USA (a globally dominant economy often used as a benchmark for industrialized economies) demonstrates that no single country was a good match alone, so their combination was needed to replicate West Germany's unique mix of characteristics before 1990. Also countries like Japan are suitable contributors because its advanced manufacturing sector and its trajectory of high export-led post-war economic growth (also through the export of vehicles) provided a specific blend of economic characteristics necessary to match West Germany's industrial profile before 1990.
+The weights ($w_j$) determined by the Synthetic Control Method tell us the contribution of each non-treated country (donor) used to construct the counterfactual. The findings from Table 6 and the corresponding figure show that the Synthetic West Germany is a weighted average heavily dominated by some countries, with the majority of the donor pool contributing very little to the final counterfactual.
 
-Looking at the balance table for the estimated key predictors, at a first glance we can see that both the real and Synthetic West Germany are extremely similar across nearly all variables. This close match confirms the model successfully achieved its first goal, which is constructing a plausible statistical twin. While GDP per capita, Trade Openness, Industry share, Schooling, and Investment rate are almost similar in both versions, the Inflation rate is still almost twice as high in the Synthetic Control (4.3) compared to the actual West Germany (2.6). These small differences in mind, taking a quick glance at the OECD Sample mean, we see some numbers are also quite similar, although others are widely off, like GDP per capita, Inflation rate, and Investment rate. While the GDP per capita, Industry share, Schooling, and Investment rate are closely matched for in the synthetic control, it was not possible to accurately reconstruct West Germany's low inflation rate before the intervention. This is because West Germany had the lowest inflation rate in the entire donor pool during the pre-reunification years. Since the synthetic control is constrained to be a convex combination (a weighted average with non-negative weights that sum to one) of the donor countries, it is mathematically impossible for the synthetic unit to have a value lower than the minimum value found among the donor pool countries, thus preventing a perfect match for this specific predictor. In other words, because West Germany had the lowest inflation rate in the sample, it is impossible to reconstruct a fitted version on that variable out of the comparison units. However, looking at these numbers we can say for certain, that the synthetic control serves as a great comparison unit, as there is still a strong balance among the predctors.
+Austria is by far the largest contributor with a weight of 0.389, followed by Switzerland (0.185) and the USA (0.166). These three countries account for nearly three-quarters of the synthetic unit's composition, meaning they were deemed the most relevant countries whose pre-reunification economic paths best matched West Germany's pre-reunification path and economic predictors. The remaining countries, such as Portugal, Spain, and Greece, received weights close to zero, indicating they were not required to accurately replicate West Germany's characteristics.
+
+The countries that contribute more to the synthetic control do so because their pre-intervention economic characteristics and outcomes (such as GDP, trade openness, and investment rate) most closely matched those of West Germany during the pre-treatment period, making them the best statistical "building blocks" for the counterfactual. Austria, in particular, likely received the highest weight due to its geographic and cultural proximity, which implies a strong historical and structural similarity that affects economic trends. The inclusion of countries like Switzerland (a highly specialized, high-GDP, non-EU economy) and the USA (a globally dominant economy often used as a benchmark for industrialized economies) demonstrates that no single country was a good match alone, so their combination was needed to replicate West Germany's unique mix of characteristics before 1990. Also, countries like Japan are suitable contributors because their advanced manufacturing sector and trajectory of high export-led post-war economic growth (also through the export of vehicles) provided a specific blend of economic characteristics necessary to match West Germany's industrial profile before 1990.
+
+Looking at the balance table for the estimated key predictors, at first glance we can see that both the real and Synthetic West Germany are extremely similar across nearly all variables. This close match confirms the model successfully achieved its first goal, which is constructing a plausible statistical twin. While GDP per capita, trade openness, industry share, schooling, and investment rate are almost similar in both versions, the inflation rate is still almost twice as high in the Synthetic Control (4.3) compared to the actual West Germany (2.6). These small differences in mind, taking a quick glance at the OECD sample mean, we see some numbers are also quite similar, although others are widely off, like GDP per capita, inflation rate, and investment rate.
+
+While the GDP per capita, industry share, schooling, and investment rate are closely matched in the synthetic control, it was not possible to accurately reconstruct West Germany's low inflation rate before the intervention. This is because West Germany had the lowest inflation rate in the entire donor pool during the pre-reunification years. Since the synthetic control is constrained to be a convex combination (a weighted average with non-negative weights that sum to one) of the donor countries, it is mathematically impossible for the synthetic unit to have a value lower than the minimum value found among the donor pool countries, thus preventing a perfect match for this specific predictor. In other words, because West Germany had the lowest inflation rate in the sample, it is impossible to reconstruct a fitted version on that variable out of the comparison units. However, looking at these numbers, we can say for certain that the synthetic control serves as a great comparison unit, as there is still a strong balance among the predictors.
 
 ---
 
-## (d) Effect Size & Permutation Test
+## (d) Treatment Effect Estimation and Permutation Test
 
 ### Tasks:
 
@@ -1462,7 +1465,6 @@ gaps.plot(
   Ylim = c(-7000, 7000)
 )
 
-# Add placebo lines
 for (i in 1:ncol(placebo_gaps)) {
   lines(years, placebo_gaps[, i], col = "gray", lwd = 0.5)
 }
@@ -1474,38 +1476,27 @@ legend("bottomleft",
        legend = c("West Germany", "Placebo units"),
        col = c("black", "gray"),
        lwd = c(2, 1))
-
-# Alternative plot: RMSPE ratio distribution
-hist(rmspe_ratio_placebo, 
-     breaks = 20,
-     main = "Distribution of Post/Pre RMSPE Ratios",
-     xlab = "RMSPE Ratio (Post/Pre)",
-     col = "lightblue",
-     border = "white")
-abline(v = rmspe_ratio_wg, col = "red", lwd = 2, lty = 2)
-legend("topright", 
-       legend = "West Germany",
-       col = "red",
-       lwd = 2,
-       lty = 2)
 ```
 
-**Interpretation (Task d.5):**
+### Discussion:
 
-Looking at the graphical representation of the trends in GDP per Capita of West Germany and the Synthetic control, we can see that the trends during the pre-treatment period are almost perfectly similar. In combination with the balance table, we can confidently state that there exists a set of industrialized countries, that can perfectly reconstruct the pre-treatment path of key economic predictors during the pre-intervention period. As discussed above, the estimate is the post-intervention gap between the treated unit ($Y_{1t}$) and the synthetic control ($\sum w_j^* Y_{jt}$), and we see that this difference is extremely close to zero over the whole pre-treatment period, confirming the excellent match. During the first couple years of the post-treatment period (1990-1992), this difference is not that pronounced, even being slightly positive as indicated by the gap plot , although it starts getting substantially larger in the following years as the two lines diverge. These findings suggest a pronounced negative and growing impact of the reunification on income in Western Germany, with the synthetic control indicating that West Germany's GDP would have been much higher without the intervention.
+Looking at the graphical representation of the trends in GDP per capita of West Germany and the synthetic control, we can see that the trends during the pre-treatment period are almost perfectly similar. In combination with the balance table, we can confidently state that there exists a set of industrialized countries that can perfectly reconstruct the pre-treatment path of key economic predictors during the pre-intervention period. As discussed above, the estimate is the post-intervention gap between the treated unit ($Y_{1t}$) and the synthetic control ($\sum w_j^* Y_{jt}$), and we see that this difference is extremely close to zero over the whole pre-treatment period, confirming the excellent match.
 
-The permutation test results from Table 7 and the corresponding figure further solidify the statistical credibility of the finding. The test confirms the causal claim that the West Germany RMSPE Ratio—where the post-reunification fit was over 20 times worse than the pre-reunification fit (20.646)—is a massive outlier. When the same synthetic control method was applied to all 16 control countries as a placebo, zero of them produced a ratio greater than or equal to West Germany's, leading to an Approximate p-value of 0.000.
+During the first couple of years of the post-treatment period (1990-1992), this difference is not that pronounced, even being slightly positive as indicated by the gap plot, although it starts getting substantially larger in the following years as the two lines diverge. These findings suggest a pronounced negative and growing impact of reunification on income in West Germany, with the synthetic control indicating that West Germany's GDP would have been much higher without the intervention.
 
-Visually, the figure confirms this: the black line (West Germany's gap) is tightly clustered around zero with the gray placebo lines before 1990. However, immediately following the intervention, the black line plunges dramatically and decisively to the bottom of the graph, falling far outside the distribution of the gray placebo lines. This means the negative economic effect on West Germany is highly unique and unlikely to be due to random chance, reinforcing the conclusion that it is a highly significant causal effect.
+The permutation test results from Table 7 and the corresponding figure further solidify the statistical credibility of the finding. The test confirms the causal claim that the West Germany RMSPE Ratio—where the post-reunification fit was over 20 times worse than the pre-reunification fit (20.646)—is a massive outlier. When the same synthetic control method was applied to all 16 control countries as a placebo, zero of them produced a ratio greater than or equal to West Germany's, leading to an approximate p-value of 0.000.
+
+Visually, the figure confirms that the black line (West Germany's gap) is tightly clustered around zero with the gray placebo lines before 1990. However, immediately following the intervention, the black line plunges dramatically and consistently to the bottom of the graph, falling far outside the distribution of the gray placebo lines. This means the negative economic effect on West Germany is highly unique and unlikely to be due to random chance, reinforcing the conclusion that it is a highly significant causal effect.
+
 ---
 
-## (e) Placebo Test on Earlier Years
+## (e) Robustness Check: Placebo Test with Earlier Treatment Year
 
 ### Tasks:
 
 1. Conduct placebo treatment year **before** actual 1990 treatment (e.g., 1975)
 2. Re-estimate synthetic control and plot the gap
-3. What does pre-treatment gap behavior tell you about parallel-trajectory assumption?
+3. What does pre-treatment gap behavior tell you about the parallel-trajectory assumption?
 4. Comment on how convincing you find the main causal estimate
 
 ```{r synth-placebo-pretreatment}
@@ -1520,10 +1511,8 @@ invisible(capture.output({
     foo = as.data.frame(repgermany),
     predictors = c("gdp", "trade", "infrate", "industry"),
     predictors.op = "mean",
-    # Use period prior to placebo year for predictors
     time.predictors.prior = 1965:1974, 
     special.predictors = list(
-      # Keep original time period for static predictors
       list("invest80", 1980:1985, "mean"), 
       list("schooling", 1980:1985, "mean")
     ),
@@ -1608,8 +1597,16 @@ results_table %>%
 
 ```
 
-**Interpretation (Tasks e.3-4):**
+### Discussion:
 
-[What does pre-treatment gap behavior tell you about parallel-trajectory assumption? How convincing is the main causal estimate?]
+As the section above shows, we find a large negative effect on West Germany's GDP per capita in the years after the reunification intervention, and our robustness checks proved to strongly support this finding. Since our estimate is the post-intervention gap between the actual and the synthetic line, we should definitely not find a division in the trajectory pre-treatment.
+
+Looking at our plotted placebo results, we still see an almost perfect fit for the "new" pre-treatment period (1960–1974). This fit also stays remarkably accurate after our false 1975 intervention, slightly diverging a bit more over time but generally holding the line. This is a crucial finding that confirms the model's predictive power.
+
+Finally, also for this placebo graph, we see the diverging outcome paths in GDP per capita around the actual intervention in 1990, with the clear diverging trends beginning then. That's a fascinating result and probably the most important one as well, since this time we fixed the weights at a much earlier point (1975) in the OECD donor pool, using less economic data. Even though we just used a smaller time period to construct the counterfactual West Germany, we still see a large, convincing effect in both trajectories around the true intervention period.
+
+Since in comparative political research it is always hard to construct counterfactuals and comparison units, especially when we're looking at aggregate entities like countries, we would naturally assume that when looking at history, there are just too many unobserved or confounding events that could mess up the trends of the actual and synthetic control unit. However, we can clearly see that, no matter what, the placebo condition still serves as an extremely accurate representation of the real, un-intervened trend, even for 15 years after the false 1975 intervention. This proves the synthetic control is robust enough to handle the complexity of real-world history and opens the door for much wider applications.
+
+Another extremely interesting finding is that we could possibly also find interventions bottom-up, by just looking at the post-treatment gap between the economic variables from some synthetic control and an actual aggregate entity's trend. When we see sudden dips or spikes in the economic performance (the growing post-treatment gap), that signal could point to an unattributed or unstudied policy shock that demands investigation. It essentially flips the method on its head, using the synthetic control as an anomaly detector to guide new research in a wide set of fields.
 
 ---
