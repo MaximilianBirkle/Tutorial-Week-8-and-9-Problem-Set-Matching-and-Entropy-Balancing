@@ -1081,6 +1081,7 @@ The pattern shows up in the Plot here. The standard errors get smaller from 1:1 
 **Discussion:**
 
 Honestly, i do not think any of these designs produce useful causal estimates, but if one had to choose its probably the 1:1 option. It does have the most variance but the fact that we have very far distances and much bias when adding extra control, so were pulling in worse matches with 2:1 and 3:1. The results relate to Abadie & Imbens (2006) in the sense that we definitely see the variance-bias trade off pattern. Also, we only have a N of 154 observations and they state that bias gets smaller with larger numbers in N, so the low number of 154 could explain the terrible results. Therefore, with infinite data and perfect overlap, Bias would go to zero for all matching rations (X:1) and also the variance would continue to get smaller with rising ratios.
+
 ---
 
 ## Q6. Robust Post-Matching Inference (Abadie & Spiess, 2021)
