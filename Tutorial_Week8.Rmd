@@ -1152,8 +1152,6 @@ $\sum_{m=1}^{k}v_m(X_{1m}-X_{0m}W)^2$
 
 This expression calculates the weighted sum of squared differences between the treated unit's pre-intervention characteristics $(X_{1m})$ and the synthetic control's characteristics $(∑w_j X_{jm})$, where W contains the weights $w_j$. The goal is to find the set of weights $(W)$ that makes the synthetic control's characteristics match the treated unit's characteristics as closely as possible, using the non-negative weights $v_m$ to prioritize certain covariates $(X_m)$.
 
-**Regarding Question 2.)**
-
 $v_m$ is a wight that reflects the relative importance assigned to each of the predictor variables, when the difference between $X_1 \text{ and } X_0W$ is measured. It is crucial that the synthetic control closely reproduces the values that variables with a large predictive power on the outcome of interest take for the unit affected by the intervention. Therefore, variables with high predictive power, logically receive high $v$-weights.
 
 The $v$-weights therefore scale the influence of a potential mismatch between the pre-treatment case of interest and the synthetic control. The unit weights $w_j$ however, determine the contribution of each single unit $(j=2 \text{ to } j=J)$ in our data (or donor pool), to the overall value of that value in the synthetic control condition. Therefore, the $v$-weights, scale the relative importance of the $w_j$ weights for a variable $m$. Selecting a high value for $v$, also leads to a stronger influence of an individual units ($j$) difference between treatment and synthetic control. Where variables are assumed to receive a higher weight, values of $w_j$ should also be chosen more carefully. Selecting low values for $v$, leads to lower influence of difference in pre-treatment characteristics of the treated and the synthetic control.
@@ -1164,8 +1162,6 @@ The $v$-weights therefore scale the influence of a potential mismatch between th
 Let $Y_{it}$ denote the outcome of unit $j$ at time $t$, $Y_1$ be a $(T_1 \times 1)$ vector collecting the post-intervention values of the outcome for the treated unit, and $Y_0$ be a $(T_1 \times J)$ matrix where column $j$ contains the post-intervention values of the outcome for unit $j+1$. For a post-intervention period $t$ (with $t \geq T_0$), the synthetic control estimator of the effect of the treatment is given by the difference between the outcome of the treated unit $(Y_{1t})$ and the outcome for the synthetic control at that period, which equals the difference between the post-intervention outcomes of the treated unit and the synthetic control $Y_1-Y_0W^*$:
 
 $$Y_{1t}- \sum_{j=2}^{J+1} w_j^* Y_{jt}$$
-
-**Regarding Question 3:**
 
 Recalling the premise and the motivation of the synthetic control method, the goal is to construct a combination of comparison units to reproduce the characteristics of the unit or units representing the case of interest. By definition, the comparison units are constructed by taking the weighted average of all potential comparison units that best resemble the characteristics of the case of interest. 
 
@@ -1286,6 +1282,7 @@ ggplot(weights_plot_df, aes(x = reorder(Country, Weight), y = Weight)) +
 ```
 
 **Interpretation:**
+
 The weights ($w_j$) determined by the Synthetic Control Method tell us the contribution of each non-treated country (donor) used to construct the counterfactual.The findings from Table 6 and the corresponding figure show that the Synthetic West Germany is a weighted average heavily dominated by some countries, with the majority of the donor pool contributing very little to the final counterfactual.
 Austria is by far the largest contributor with a weight of 0.389 , followed by Switzerland (0.185) and the USA (0.166). These three countries account for nearly three-quarters of the synthetic unit's composition, meaning they were deemed the most relevant countries whose pre-reunification economic paths, best matched West Germany's pre-reunification path and economic predictors. The remaining countries, such as Portugal, Spain, and Greece, received weights close to zero, indicating they were not required to accurately replicate West Germany's characteristics.
 The countries that contribute more to the synthetic control do so because their pre-intervention economic characteristics and outcomes (such as GDP, trade openness, and investment rate) most closely matched those of West Germany during the pre-treatment period, making them the best statistical "building blocks" for the counterfactual. Austria, in particular, likely received the highest weight due to its geographic and cultural proximity, which implies a strong historical and structural similarity that affects economic trends. The inclusion of countries like Switzerland (a highly specialized, high-GDP, non-EU economy) and the USA (a globally dominant economy often used as a benchmark for industrialized economies) demonstrates that no single country was a good match alone, so their combination was needed to replicate West Germany's unique mix of characteristics before 1990. Also countries like Japan are suitable contributors because its advanced manufacturing sector and its trajectory of high export-led post-war economic growth (also through the export of vehicles) provided a specific blend of economic characteristics necessary to match West Germany's industrial profile before 1990.
@@ -1311,7 +1308,7 @@ path.plot(
   dataprep.res = dataprep_out,
   Ylab = "Real GDP per capita (1985 USD, thousand)",
   Xlab = "Year",
-  Ylim = c(15000, 35000),
+  Ylim = c(0, 35000),
   Legend = c("West Germany", "Synthetic West Germany"),
   Legend.position = "topleft",
   Main = "West Germany vs. Synthetic Control: GDP per Capita"
@@ -1495,8 +1492,11 @@ legend("topright",
 
 **Interpretation (Task d.5):**
 
-[What does this suggest about the economic impact of reunification?]
+Looking at the graphical representation of the trends in GDP per Capita of West Germany and the Synthetic control, we can see that the trends during the pre-treatment period are almost perfectly similar. In combination with the balance table, we can confidently state that there exists a set of industrialized countries, that can perfectly reconstruct the pre-treatment path of key economic predictors during the pre-intervention period. As discussed above, the estimate is the post-intervention gap between the treated unit ($Y_{1t}$) and the synthetic control ($\sum w_j^* Y_{jt}$), and we see that this difference is extremely close to zero over the whole pre-treatment period, confirming the excellent match. During the first couple years of the post-treatment period (1990-1992), this difference is not that pronounced, even being slightly positive as indicated by the gap plot , although it starts getting substantially larger in the following years as the two lines diverge. These findings suggest a pronounced negative and growing impact of the reunification on income in Western Germany, with the synthetic control indicating that West Germany's GDP would have been much higher without the intervention.
 
+The permutation test results from Table 7 and the corresponding figure further solidify the statistical credibility of the finding. The test confirms the causal claim that the West Germany RMSPE Ratio—where the post-reunification fit was over 20 times worse than the pre-reunification fit (20.646)—is a massive outlier. When the same synthetic control method was applied to all 16 control countries as a placebo, zero of them produced a ratio greater than or equal to West Germany's, leading to an Approximate p-value of 0.000.
+
+Visually, the figure confirms this: the black line (West Germany's gap) is tightly clustered around zero with the gray placebo lines before 1990. However, immediately following the intervention, the black line plunges dramatically and decisively to the bottom of the graph, falling far outside the distribution of the gray placebo lines. This means the negative economic effect on West Germany is highly unique and unlikely to be due to random chance, reinforcing the conclusion that it is a highly significant causal effect.
 ---
 
 ## (e) Placebo Test on Earlier Years
